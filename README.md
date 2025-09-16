@@ -7,7 +7,7 @@
 
 MacOS Tahoe removed launchpad,and it's so hard to use, it's doesn't use your Bio GPU, please apple, at least give people an option to switch back. Before that, here is LaunchNext
 
-*Built upon [LaunchNext](https://github.com/ggkevinnnn/LaunchNext) by ggkevinnnn - huge thanks to the original project! I hope this enhanced version can be merged back to the original repository*
+*Built upon [LaunchNow](https://github.com/ggkevinnnn/LaunchNow) by ggkevinnnn - huge thanks to the original project! I hope this enhanced version can be merged back to the original repository*
 
 *Since the original project has no license specified, the original author is welcome to contact me regarding licensing or any concerns.*
 
