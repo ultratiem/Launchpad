@@ -4,7 +4,7 @@
 
 ## 📥 Descargar
 
-**[Descargar aquí](https://github.com/RoversX/LaunchNext/releases/tag/main)** - Obtén la última versión
+**[Descargar aquí](https://github.com/RoversX/LaunchNext/releases/latest)** - Obtén la última versión
 
 ![LaunchNext Banner](../public/banner.png)
 

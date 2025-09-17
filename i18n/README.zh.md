@@ -4,7 +4,7 @@
 
 ## 📥 下载
 
-**[点此下载](https://github.com/RoversX/LaunchNext/releases/tag/main)** - 获取最新版本
+**[点此下载](https://github.com/RoversX/LaunchNext/releases/latest)** - 获取最新版本
 
 ![LaunchNext Banner](../public/banner.png)
 

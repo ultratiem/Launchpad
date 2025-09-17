@@ -4,7 +4,7 @@
 
 ## 📥 ダウンロード
 
-**[こちらからダウンロード](https://github.com/RoversX/LaunchNext/releases/tag/main)** - 最新版を入手
+**[こちらからダウンロード](https://github.com/RoversX/LaunchNext/releases/latest)** - 最新版を入手
 
 ![LaunchNext Banner](../public/banner.png)
 
