@@ -13,7 +13,7 @@
       "blur-material" : null,
       "layers" : [
         {
-          "glass" : true,
+          "glass" : false,
           "hidden" : false,
           "image-name" : "launchpad_new.png",
           "name" : "launchpad_new",

@@ -123,7 +123,7 @@ struct FolderView: View {
             Spacer()
             VStack(spacing: 8) {
                 if isEditingName {
-                    TextField("Folder Name", text: $folderName)
+                    TextField(appStore.localized(.folderNamePlaceholder), text: $folderName)
                         .textFieldStyle(.plain)
                         .multilineTextAlignment(.center)
                         .font(.title)

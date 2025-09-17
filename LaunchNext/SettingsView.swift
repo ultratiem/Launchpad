@@ -10,9 +10,9 @@ struct SettingsView: View {
     var body: some View {
         VStack {
             HStack(alignment: .firstTextBaseline) {
-                Text("LaunchNext")
+                Text(appStore.localized(.appTitle))
                     .font(.title)
-                Text("v\(getVersion())")
+                Text("\(appStore.localized(.versionPrefix))\(getVersion())")
                     .font(.footnote)
                 Spacer()
                 Button {
@@ -27,7 +27,7 @@ struct SettingsView: View {
             .padding()
             
             HStack {
-                Text("Modified from LaunchNow version 1.3.1")
+                Text(appStore.localized(.modifiedFrom))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -37,7 +37,7 @@ struct SettingsView: View {
             
             VStack {
                 HStack {
-                    Text("Automatically run on background: add LaunchNext to dock or use keyboard shortcuts to open the application window")
+                    Text(appStore.localized(.backgroundHint))
                     Spacer()
                 }
             }
@@ -47,7 +47,7 @@ struct SettingsView: View {
             
             VStack {
                 HStack {
-                    Text("Classic Launchpad (Fullscreen)")
+                    Text(appStore.localized(.classicMode))
                     Spacer()
                     Toggle(isOn: $appStore.isFullscreenMode) {
                         
@@ -55,56 +55,73 @@ struct SettingsView: View {
                     .toggleStyle(.switch)
                 }
                 HStack {
-                    Text("Icon size")
+                    Text(appStore.localized(.iconSize))
                     VStack {
                         Slider(value: $appStore.iconScale, in: 0.8...1.1)
                         HStack {
-                            Text("Smaller").font(.footnote)
+                            Text(appStore.localized(.smaller)).font(.footnote)
                             Spacer()
-                            Text("Larger").font(.footnote)
+                            Text(appStore.localized(.larger)).font(.footnote)
                         }
                     }
                 }
                 HStack {
-                    Text("Show labels under icons")
+                    Text(appStore.localized(.predictDrop))
+                    Spacer()
+                    Toggle(isOn: $appStore.enableDropPrediction) { }
+                        .toggleStyle(.switch)
+                }
+                HStack {
+                    Text(appStore.localized(.showLabels))
                     Spacer()
                     Toggle(isOn: $appStore.showLabels) { }
                         .toggleStyle(.switch)
                 }
                 HStack {
-                    Text("Scrolling sensitivity")
+                    Text(appStore.localized(.scrollSensitivity))
                     VStack {
                         Slider(value: $appStore.scrollSensitivity, in: 0.01...0.99)
                         HStack {
-                            Text("Low")
+                            Text(appStore.localized(.low))
                                 .font(.footnote)
                             Spacer()
-                            Text("High")
+                            Text(appStore.localized(.high))
                                 .font(.footnote)
                         }
                     }
                 }
+                HStack {
+                    Text(appStore.localized(.languagePickerTitle))
+                    Spacer()
+                    Picker(appStore.localized(.languagePickerTitle), selection: $appStore.preferredLanguage) {
+                        ForEach(AppLanguage.allCases) { language in
+                            Text(appStore.localizedLanguageName(for: language)).tag(language)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                }
             }
             .padding()
-            
+
             Divider()
             
             VStack(alignment: .leading, spacing: 8) {
                 // Row 1: System + Legacy
                 HStack(spacing: 12) {
                     Button { importFromLaunchpad() } label: {
-                        Label("Import System Launchpad", systemImage: "square.and.arrow.down.on.square")
+                        Label(appStore.localized(.importSystem), systemImage: "square.and.arrow.down.on.square")
                     }
-                    .help("Import your current macOS Launchpad layout directly")
+                    .help(appStore.localized(.importTip))
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                     Button { importLegacyArchive() } label: {
-                        Label("Import Legacy (.lmy)", systemImage: "clock.arrow.circlepath")
+                        Label(appStore.localized(.importLegacy), systemImage: "clock.arrow.circlepath")
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 HStack {
-                    Text("Tip: Click ‘Import System Launchpad’ to import directly from the system Launchpad.")
+                    Text(appStore.localized(.importTip))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                     Spacer()
@@ -113,12 +130,12 @@ struct SettingsView: View {
                 // Row 2: Export + Import Data Folder
                 HStack(spacing: 12) {
                     Button { exportDataFolder() } label: {
-                        Label("Export Data", systemImage: "square.and.arrow.up")
+                        Label(appStore.localized(.exportData), systemImage: "square.and.arrow.up")
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                     Button { importDataFolder() } label: {
-                        Label("Import Data", systemImage: "square.and.arrow.down")
+                        Label(appStore.localized(.importData), systemImage: "square.and.arrow.down")
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -132,7 +149,7 @@ struct SettingsView: View {
                 Button {
                     appStore.refresh()
                 } label: {
-                    Label("Refresh", systemImage: "arrow.clockwise")
+                    Label(appStore.localized(.refresh), systemImage: "arrow.clockwise")
                 }
 
                 Spacer()
@@ -140,20 +157,20 @@ struct SettingsView: View {
                 Button {
                     showResetConfirm = true
                 } label: {
-                    Label("Reset Layout", systemImage: "arrow.counterclockwise")
+                    Label(appStore.localized(.resetLayout), systemImage: "arrow.counterclockwise")
                         .foregroundStyle(Color.red)
                 }
-                .alert("Confirm to reset layout?", isPresented: $showResetConfirm) {
-                    Button("Reset", role: .destructive) { appStore.resetLayout() }
-                    Button("Cancel", role: .cancel) {}
+                .alert(appStore.localized(.resetAlertTitle), isPresented: $showResetConfirm) {
+                    Button(appStore.localized(.resetConfirm), role: .destructive) { appStore.resetLayout() }
+                    Button(appStore.localized(.cancel), role: .cancel) {}
                 } message: {
-                    Text("This will completely reset the layout: remove all folders, clear saved order, and rescan all applications. All customizations will be lost.")
+                    Text(appStore.localized(.resetAlertMessage))
                 }
                                 
                 Button {
                     AppDelegate.shared?.quitWithFade()
                 } label: {
-                    Label("Quit", systemImage: "xmark.circle")
+                    Label(appStore.localized(.quit), systemImage: "xmark.circle")
                         .foregroundStyle(Color.red)
                 }
             }
@@ -186,8 +203,8 @@ struct SettingsView: View {
             panel.canChooseDirectories = true
             panel.canCreateDirectories = true
             panel.allowsMultipleSelection = false
-            panel.prompt = "Choose"
-            panel.message = "Choose a destination folder to export LaunchNext data"
+            panel.prompt = appStore.localized(.chooseButton)
+            panel.message = appStore.localized(.exportPanelMessage)
             if panel.runModal() == .OK, let destParent = panel.url {
                 let formatter = DateFormatter()
                 formatter.dateFormat = "yyyyMMdd_HHmmss"
@@ -206,8 +223,8 @@ struct SettingsView: View {
         panel.canChooseDirectories = true
         panel.canCreateDirectories = false
         panel.allowsMultipleSelection = false
-        panel.prompt = "Import"
-        panel.message = "Choose a folder previously exported from LaunchNext"
+        panel.prompt = appStore.localized(.importPrompt)
+        panel.message = appStore.localized(.importPanelMessage)
         if panel.runModal() == .OK, let srcDir = panel.url {
             do {
                 // 验证是否为有效的排序数据目录
@@ -271,15 +288,15 @@ struct SettingsView: View {
             DispatchQueue.main.async {
                 let alert = NSAlert()
                 if result.success {
-                    alert.messageText = "Import Successful"
+                    alert.messageText = appStore.localized(.importSuccessfulTitle)
                     alert.informativeText = result.message
                     alert.alertStyle = .informational
                 } else {
-                    alert.messageText = "Import Failed"
+                    alert.messageText = appStore.localized(.importFailedTitle)
                     alert.informativeText = result.message
                     alert.alertStyle = .warning
                 }
-                alert.addButton(withTitle: "OK")
+                alert.addButton(withTitle: appStore.localized(.okButton))
                 alert.runModal()
             }
         }
@@ -292,8 +309,8 @@ struct SettingsView: View {
         panel.canCreateDirectories = false
         panel.allowsMultipleSelection = false
         panel.allowedFileTypes = ["lmy", "zip", "db"]
-        panel.prompt = "Import"
-        panel.message = "Choose a legacy Launchpad archive (.lmy/.zip) or a db file"
+        panel.prompt = appStore.localized(.importPrompt)
+        panel.message = appStore.localized(.legacyArchivePanelMessage)
 
         if panel.runModal() == .OK, let url = panel.url {
             Task {
@@ -301,15 +318,15 @@ struct SettingsView: View {
                 DispatchQueue.main.async {
                     let alert = NSAlert()
                     if result.success {
-                        alert.messageText = "Import Successful"
+                        alert.messageText = appStore.localized(.importSuccessfulTitle)
                         alert.informativeText = result.message
                         alert.alertStyle = .informational
                     } else {
-                        alert.messageText = "Import Failed"
+                        alert.messageText = appStore.localized(.importFailedTitle)
                         alert.informativeText = result.message
                         alert.alertStyle = .warning
                     }
-                    alert.addButton(withTitle: "OK")
+                    alert.addButton(withTitle: appStore.localized(.okButton))
                     alert.runModal()
                 }
             }

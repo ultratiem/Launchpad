@@ -2,8 +2,11 @@
 
 **Languages**: [English](README.md) | [中文](i18n/README.zh.md) | [日本語](i18n/README.ja.md) | [Français](i18n/README.fr.md) | [Español](i18n/README.es.md)
 
-![LaunchNext Banner](./public/banner.png)
+## 📥 Download
 
+**[Download here](https://github.com/RoversX/LaunchNext/releases/tag/main)** - Get the latest release
+
+![LaunchNext Banner](./public/banner.png)
 
 MacOS Tahoe removed launchpad,and it's so hard to use, it's doesn't use your Bio GPU, please apple, at least give people an option to switch back. Before that, here is LaunchNext
 
@@ -14,6 +17,7 @@ MacOS Tahoe removed launchpad,and it's so hard to use, it's doesn't use your Bio
 ### What LaunchNext Delivers
 - ✅ **One-click import from old system Launchpad** - directly reads your native Launchpad SQLite database (`/private$(getconf DARWIN_USER_DIR)com.apple.dock.launchpad/db/db`) to perfectly recreate your existing folders, app positions, and layout
 - ✅ **Classic Launchpad experience** - works exactly like the beloved original interface
+- ✅ **Multi-language support** - full internationalization with English, Chinese, Japanese, French, and Spanish
 - ✅ **Hide icon labels** - clean, minimalist view when you don't need app names
 - ✅ **Custom icon sizes** - adjust icon dimensions to fit your preferences
 - ✅ **Smart folder management** - create and organize folders just like before
@@ -254,4 +258,5 @@ MIT License - see [LICENSE](LICENSE) file for details.
 This project was developed with assistance from:
 
 - Claude Code 
+- Cursor
 - OpenAI Codex Cli

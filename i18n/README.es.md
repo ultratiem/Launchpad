@@ -2,6 +2,10 @@
 
 **Idiomas**: [English](../README.md) | [中文](README.zh.md) | [日本語](README.ja.md) | [Français](README.fr.md) | [Español](README.es.md)
 
+## 📥 Descargar
+
+**[Descargar aquí](https://github.com/RoversX/LaunchNext/releases/tag/main)** - Obtén la última versión
+
 ![LaunchNext Banner](../public/banner.png)
 
 macOS Tahoe eliminó el Launchpad, y la nueva interfaz es difícil de usar, no aprovecha completamente tu Bio GPU. Apple, al menos da a los usuarios una opción para volver atrás. Mientras tanto, aquí está LaunchNext.
@@ -13,6 +17,7 @@ macOS Tahoe eliminó el Launchpad, y la nueva interfaz es difícil de usar, no a
 ### Lo que LaunchNext ofrece
 - ✅ **Importación con un clic desde el Launchpad del sistema antiguo** - lee directamente tu base de datos SQLite nativa de Launchpad (`/private$(getconf DARWIN_USER_DIR)com.apple.dock.launchpad/db/db`) para recrear perfectamente tus carpetas existentes, posiciones de aplicaciones y diseño
 - ✅ **Experiencia clásica de Launchpad** - funciona exactamente como la interfaz original querida
+- ✅ **Soporte multi-idioma** - internacionalización completa con inglés, chino, japonés, francés y español
 - ✅ **Ocultar etiquetas de iconos** - vista limpia y minimalista cuando no necesitas nombres de aplicaciones
 - ✅ **Tamaños de iconos personalizados** - ajusta las dimensiones de los iconos según tus preferencias
 - ✅ **Gestión inteligente de carpetas** - crea y organiza carpetas como antes
@@ -213,4 +218,5 @@ Licencia MIT - ver archivo [LICENSE](../LICENSE) para detalles.
 
 Este proyecto fue desarrollado con la asistencia de:
 - Claude Code - Asistente de desarrollo impulsado por IA
+- Cursor
 - OpenAI Codex Cli - Generación y optimización de código

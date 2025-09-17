@@ -33,6 +33,7 @@ private class PageFlipManager: ObservableObject {
 
 struct LaunchpadView: View {
     @ObservedObject var appStore: AppStore
+    @Environment(\.colorScheme) private var colorScheme
     @State private var keyMonitor: Any?
     @State private var windowObserver: NSObjectProtocol?
     @State private var windowHiddenObserver: NSObjectProtocol?
@@ -71,13 +72,18 @@ struct LaunchpadView: View {
     @State private var wheelLastDirection: Int = 0
     @State private var wheelLastFlipAt: Date? = nil
     private let wheelFlipCooldown: TimeInterval = 0.15
+    @State private var dragPointerOffset: CGPoint = .zero
 
     private var isFolderOpen: Bool { appStore.openFolder != nil }
     
     private var config: GridConfig {
         GridConfig(isFullscreen: appStore.isFullscreenMode)
     }
-    
+
+    private var backdropOpacity: Double {
+        appStore.isFullscreenMode ? (colorScheme == .dark ? 0.60 : 0.78) : 0.0
+    }
+
     var filteredItems: [LaunchpadItem] {
         guard !appStore.searchText.isEmpty else { return appStore.items }
         
@@ -189,7 +195,7 @@ struct LaunchpadView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "magnifyingglass")
                             .foregroundStyle(.secondary)
-                        TextField("Search", text: $appStore.searchText)
+                        TextField(appStore.localized(.searchPlaceholder), text: $appStore.searchText)
                             .textFieldStyle(.plain)
                     }
                     .padding(.vertical, 8)
@@ -301,7 +307,7 @@ struct LaunchpadView: View {
                             Image(systemName: "magnifyingglass")
                                 .font(.largeTitle)
                                 .foregroundStyle(.placeholder)
-                            Text("No apps found")
+                            Text(appStore.localized(.noAppsFound))
                                 .font(.title)
                                 .foregroundStyle(.placeholder)
                         }
@@ -337,6 +343,7 @@ struct LaunchpadView: View {
                                             }
                                         }
                                         .animation(LNAnimations.gridUpdate, value: pendingDropIndex)
+                                        .id("grid_\(index)_\(appStore.gridRefreshTrigger.uuidString)")
                                         // 避免非必要的全局刷新动画，降低拖拽重绘
                                         .frame(maxHeight: .infinity, alignment: .top)
                                     }
@@ -358,7 +365,9 @@ struct LaunchpadView: View {
                         }
                         
                         .coordinateSpace(name: "grid")
-                        .simultaneousGesture(
+                        // 让整个网格容器都可命中，以捕获空白区域的点击
+                        .contentShape(Rectangle())
+                        .gesture(
                             DragGesture(minimumDistance: 0, coordinateSpace: .named("grid"))
                                 .onEnded { value in
                                     closeIfTappedOnEmptyOrGap(at: value.location,
@@ -366,9 +375,20 @@ struct LaunchpadView: View {
                                                               columnWidth: columnWidth,
                                                               appHeight: appHeight,
                                                               iconSize: iconSize)
-                                }
+                                },
+                            including: .subviews
                         )
-                        .onTapGesture { NSApp.keyWindow?.makeFirstResponder(nil) }
+                        .onTapGesture {
+                            // 失焦输入
+                            NSApp.keyWindow?.makeFirstResponder(nil)
+                            // 使用屏幕坐标换算为网格坐标，允许在空白处点击关闭
+                            let p = convertScreenToGrid(NSEvent.mouseLocation)
+                            closeIfTappedOnEmptyOrGap(at: p,
+                                                      geoSize: geo.size,
+                                                      columnWidth: columnWidth,
+                                                      appHeight: appHeight,
+                                                      iconSize: iconSize)
+                        }
                         .onAppear { }
                         
                         .onChange(of: appStore.handoffDraggingApp) {
@@ -391,6 +411,11 @@ struct LaunchpadView: View {
                                     currentPage: appStore.currentPage,
                                     itemsPerPage: config.itemsPerPage
                                 )
+                            }
+                        }
+                        .onChange(of: appStore.gridRefreshTrigger) { _ in
+                            DispatchQueue.main.async {
+                                captureGridGeometry(geo, columnWidth: columnWidth, appHeight: appHeight, iconSize: iconSize)
                             }
                         }
                         .onChange(of: geo.size) {
@@ -435,6 +460,11 @@ struct LaunchpadView: View {
         }
         .padding()
         .glassEffect(in: RoundedRectangle(cornerRadius: appStore.isFullscreenMode ? 0 : 30))
+        .background(
+            appStore.isFullscreenMode
+                ? Color.black.opacity(backdropOpacity)
+                : Color.clear
+        )
         .ignoresSafeArea()
         .overlay(
             ZStack {
@@ -611,6 +641,7 @@ struct LaunchpadView: View {
                            appStore.folderCreationTarget = nil
                            pageFlipManager.isCooldown = false
                            isHandoffDragging = false
+                           dragPointerOffset = .zero
                            clampSelection()
                        }
                    }
@@ -675,6 +706,7 @@ struct LaunchpadView: View {
         isKeyboardNavigationActive = false
         appStore.isDragCreatingFolder = false
         appStore.folderCreationTarget = nil
+        dragPointerOffset = .zero
         dragPreviewScale = 1.2
         dragPreviewPosition = localPoint
         // 使接力拖拽与普通拖拽一致：预创建新页面以支持边缘翻页
@@ -761,14 +793,16 @@ struct LaunchpadView: View {
         }
         // 在接力拖拽模式下，落点时再计算目标索引，过程中不展示吸附
         if isHandoffDragging && pendingDropIndex == nil {
-            if let idx = indexAt(point: dragPreviewPosition,
+            let pointerPoint = CGPoint(x: dragPreviewPosition.x + dragPointerOffset.x,
+                                       y: dragPreviewPosition.y + dragPointerOffset.y)
+            if let idx = indexAt(point: pointerPoint,
                                   in: currentContainerSize,
                                   pageIndex: appStore.currentPage,
                                   columnWidth: currentColumnWidth,
                                   appHeight: currentAppHeight) {
                 pendingDropIndex = idx
             } else {
-                pendingDropIndex = predictedDropIndex(for: dragPreviewPosition,
+                pendingDropIndex = predictedDropIndex(for: pointerPoint,
                                                       in: currentContainerSize,
                                                       columnWidth: currentColumnWidth,
                                                       appHeight: currentAppHeight)
@@ -821,7 +855,23 @@ extension LaunchpadView {
                              pageIndex: appStore.currentPage,
                              columnWidth: columnWidth,
                              appHeight: appHeight) {
-            if currentItems.indices.contains(idx), case .empty = currentItems[idx] {
+            guard currentItems.indices.contains(idx) else {
+                AppDelegate.shared?.hideWindow()
+                return
+            }
+
+            if case .empty = currentItems[idx] {
+                AppDelegate.shared?.hideWindow()
+                return
+            }
+
+            let interactiveRect = itemInteractiveRect(for: idx,
+                                                      geoSize: geoSize,
+                                                      columnWidth: columnWidth,
+                                                      appHeight: appHeight,
+                                                      iconSize: iconSize)
+
+            if !interactiveRect.contains(point) {
                 AppDelegate.shared?.hideWindow()
             }
         } else {
@@ -1203,7 +1253,7 @@ extension LaunchpadView {
                          appHeight: CGFloat) -> Int? {
         guard pages.indices.contains(pageIndex) else { return nil }
         let pageItems = pages[pageIndex]
-        
+
         guard let offsetInPage = GeometryUtils.indexAt(point: point,
                                                       containerSize: containerSize,
                                                       pageIndex: pageIndex,
@@ -1216,10 +1266,57 @@ extension LaunchpadView {
                                                       currentPage: appStore.currentPage,
                                                       itemsPerPage: config.itemsPerPage,
                                                       pageItems: pageItems) else { return nil }
-        
+
         let startIndexInCurrentItems = pages.prefix(pageIndex).reduce(0) { $0 + $1.count }
         let globalIndex = startIndexInCurrentItems + offsetInPage
         return currentItems.indices.contains(globalIndex) ? globalIndex : nil
+    }
+
+    private func itemInteractiveRect(for globalIndex: Int,
+                                      geoSize: CGSize,
+                                      columnWidth: CGFloat,
+                                      appHeight: CGFloat,
+                                      iconSize: CGFloat) -> CGRect {
+        let pageIndex = max(0, globalIndex / config.itemsPerPage)
+        let localIndex = globalIndex % config.itemsPerPage
+        let cellOrigin = GeometryUtils.cellOrigin(for: localIndex,
+                                                  containerSize: geoSize,
+                                                  pageIndex: pageIndex,
+                                                  columnWidth: columnWidth,
+                                                  appHeight: appHeight,
+                                                  columns: config.columns,
+                                                  columnSpacing: config.columnSpacing,
+                                                  rowSpacing: config.rowSpacing,
+                                                  pageSpacing: config.pageSpacing,
+                                                  currentPage: appStore.currentPage)
+        let cellRect = CGRect(x: cellOrigin.x,
+                              y: cellOrigin.y,
+                              width: columnWidth,
+                              height: appHeight)
+
+        // 与 LaunchpadItemButton 中的布局保持一致：按钮内容有 8pt 内边距，图标与标签垂直间距 8pt
+        let horizontalPadding: CGFloat = 8
+        let verticalPadding: CGFloat = 8
+        let labelWidth = columnWidth * 0.9
+        let hasLabel = appStore.showLabels
+        let iconLabelSpacing: CGFloat = hasLabel ? 8 : 0
+        let contentWidth = min(columnWidth, max(iconSize, labelWidth) + horizontalPadding * 2)
+        let rawLabelHeight = max(0, appHeight - iconSize - verticalPadding * 2 - iconLabelSpacing)
+        let labelHeight = hasLabel ? rawLabelHeight : 0
+        let contentHeight = min(appHeight, iconSize + iconLabelSpacing + labelHeight + verticalPadding * 2)
+
+        let insetX = max(0, (columnWidth - contentWidth) / 2)
+        let insetY = max(0, (appHeight - contentHeight) / 2)
+
+        return cellRect.insetBy(dx: insetX, dy: insetY)
+    }
+
+    private func clampPointWithinBounds(_ point: CGPoint, containerSize: CGSize) -> CGPoint {
+        let maxX = max(containerSize.width - 0.1, 0)
+        let maxY = max(containerSize.height - 0.1, 0)
+        let clampedX = min(max(point.x, 0), maxX)
+        let clampedY = min(max(point.y, 0), maxY)
+        return CGPoint(x: clampedX, y: clampedY)
     }
 
     private func isPointInCenterArea(point: CGPoint,
@@ -1435,18 +1532,26 @@ extension LaunchpadView {
         }
     }
 
-    fileprivate func flipPageIfNeeded(at point: CGPoint, in containerSize: CGSize) -> Bool {
+    fileprivate func flipPageIfNeeded(iconCenter: CGPoint,
+                                      pointer: CGPoint,
+                                      iconSize: CGFloat,
+                                      in containerSize: CGSize) -> Bool {
         let edgeMargin: CGFloat = config.pageNavigation.edgeFlipMargin
         
         // 检查翻页冷却状态
         pageFlipManager.autoFlipInterval = config.pageNavigation.autoFlipInterval
         guard pageFlipManager.canFlip() else { return false }
+
+        let verticalTolerance = max(iconSize * 0.8, 60)
+        if pointer.y < -verticalTolerance || pointer.y > containerSize.height + verticalTolerance {
+            return false
+        }
                 
-        if point.x <= edgeMargin && appStore.currentPage > 0 {
+        if iconCenter.x <= edgeMargin && appStore.currentPage > 0 {
             navigateToPreviousPage()
             pageFlipManager.recordFlip()
             return true
-        } else if point.x >= containerSize.width - edgeMargin {
+        } else if iconCenter.x >= containerSize.width - edgeMargin {
             // 检查是否需要创建新页面
             let nextPage = appStore.currentPage + 1
             let itemsPerPage = config.itemsPerPage
@@ -1468,8 +1573,12 @@ extension LaunchpadView {
         return false
     }
 
-    fileprivate func predictedDropIndex(for point: CGPoint, in containerSize: CGSize, columnWidth: CGFloat, appHeight: CGFloat) -> Int? {
-        if let predicted = indexAt(point: point,
+    fileprivate func predictedDropIndex(for pointer: CGPoint, in containerSize: CGSize, columnWidth: CGFloat, appHeight: CGFloat) -> Int? {
+        let queryPoint = appStore.enableDropPrediction
+            ? clampPointWithinBounds(pointer, containerSize: containerSize)
+            : pointer
+
+        if let predicted = indexAt(point: queryPoint,
                                    in: containerSize,
                                    pageIndex: appStore.currentPage,
                                    columnWidth: columnWidth,
@@ -1480,15 +1589,15 @@ extension LaunchpadView {
         let edgeMargin: CGFloat = config.pageNavigation.edgeFlipMargin
         let itemsPerPage = config.itemsPerPage
         
-        if point.x <= edgeMargin && appStore.currentPage > 0 {
+        if queryPoint.x <= edgeMargin && appStore.currentPage > 0 {
             let prevPage = appStore.currentPage - 1
             let prevPageStart = prevPage * itemsPerPage
             let prevPageEnd = min(prevPageStart + itemsPerPage, currentItems.count)
             return max(prevPageStart, prevPageEnd - 1)
-        } else if point.x >= containerSize.width - edgeMargin {
+        } else if queryPoint.x >= containerSize.width - edgeMargin {
             let nextPage = appStore.currentPage + 1
             let nextPageStart = nextPage * itemsPerPage
-            
+
             // 如果拖拽到新页面，确保能够正确预测到新页面的第一个位置
             if nextPageStart >= currentItems.count {
                 // 拖拽到全新页面，返回新页面的第一个位置
@@ -1497,7 +1606,7 @@ extension LaunchpadView {
                 return min(nextPageStart, currentItems.count - 1)
             }
         } else {
-            if point.x <= edgeMargin {
+            if queryPoint.x <= edgeMargin {
                 return appStore.currentPage * itemsPerPage
             } else {
                 let currentPageEnd = min((appStore.currentPage + 1) * itemsPerPage, currentItems.count)
@@ -1654,7 +1763,21 @@ extension LaunchpadView {
             isKeyboardNavigationActive = false
             appStore.isDragCreatingFolder = false
             appStore.folderCreationTarget = nil
-            dragPreviewPosition = value.location
+            if let idx = currentItems.firstIndex(of: item) {
+                let pageIndex = idx / config.itemsPerPage
+                let interactiveRect = itemInteractiveRect(for: idx,
+                                                           geoSize: containerSize,
+                                                           columnWidth: columnWidth,
+                                                           appHeight: appHeight,
+                                                           iconSize: iconSize)
+                let center = CGPoint(x: interactiveRect.midX, y: interactiveRect.midY)
+                dragPointerOffset = CGPoint(x: value.location.x - center.x,
+                                             y: value.location.y - center.y)
+            } else {
+                dragPointerOffset = .zero
+            }
+            dragPreviewPosition = CGPoint(x: value.location.x - dragPointerOffset.x,
+                                           y: value.location.y - dragPointerOffset.y)
         }
         applyDragUpdate(at: value.location,
                         containerSize: containerSize,
@@ -1666,6 +1789,7 @@ extension LaunchpadView {
     // 统一的拖拽结束处理逻辑（普通拖拽与接力拖拽共用）
     private func finalizeDragOperation(containerSize: CGSize, columnWidth: CGFloat, appHeight: CGFloat, iconSize: CGFloat) {
         guard let dragging = draggingItem else { return }
+        defer { dragPointerOffset = .zero }
         
         // 处理文件夹创建逻辑
         if appStore.isDragCreatingFolder, case .app(let app) = dragging {
@@ -1698,7 +1822,9 @@ extension LaunchpadView {
                     }
                 }
             } else {
-                if let hoveringIndex = indexAt(point: dragPreviewPosition,
+                let pointerPoint = CGPoint(x: dragPreviewPosition.x + dragPointerOffset.x,
+                                           y: dragPreviewPosition.y + dragPointerOffset.y)
+                if let hoveringIndex = indexAt(point: pointerPoint,
                                                in: containerSize,
                                                pageIndex: appStore.currentPage,
                                                columnWidth: columnWidth,
@@ -1786,11 +1912,17 @@ extension LaunchpadView {
                                  columnWidth: CGFloat,
                                  appHeight: CGFloat,
                                  iconSize: CGFloat) {
+        let rawIconCenter = CGPoint(x: point.x - dragPointerOffset.x,
+                                     y: point.y - dragPointerOffset.y)
+        let iconCenter = appStore.enableDropPrediction
+            ? clampPointWithinBounds(rawIconCenter, containerSize: containerSize)
+            : rawIconCenter
+        let hoverPoint = appStore.enableDropPrediction ? iconCenter : point
         // 性能优化：减少频繁的位置更新
-        let distance = sqrt(pow(dragPreviewPosition.x - point.x, 2) + pow(dragPreviewPosition.y - point.y, 2))
+        let distance = sqrt(pow(dragPreviewPosition.x - iconCenter.x, 2) + pow(dragPreviewPosition.y - iconCenter.y, 2))
         if distance < 2.0 { return } // 如果移动距离小于2像素，跳过更新
         
-        dragPreviewPosition = point
+        dragPreviewPosition = iconCenter
         
         // 性能优化：使用节流机制减少计算频率
         let now = Date()
@@ -1803,7 +1935,7 @@ extension LaunchpadView {
             Self.lastGeometryUpdate = now
         }
         
-        if let hoveringIndex = indexAt(point: dragPreviewPosition,
+        if let hoveringIndex = indexAt(point: hoverPoint,
                                        in: containerSize,
                                        pageIndex: appStore.currentPage,
                                        columnWidth: columnWidth,
@@ -1814,8 +1946,15 @@ extension LaunchpadView {
             clearHoveringState()
         }
 
-        if flipPageIfNeeded(at: point, in: containerSize) {
-            pendingDropIndex = predictedDropIndex(for: point, in: containerSize, columnWidth: columnWidth, appHeight: appHeight)
+        if flipPageIfNeeded(iconCenter: iconCenter,
+                            pointer: point,
+                            iconSize: iconSize,
+                            in: containerSize) {
+            let dropPoint = appStore.enableDropPrediction ? iconCenter : point
+            pendingDropIndex = predictedDropIndex(for: dropPoint,
+                                                  in: containerSize,
+                                                  columnWidth: columnWidth,
+                                                  appHeight: appHeight)
         }
     }
     
@@ -1826,8 +1965,10 @@ extension LaunchpadView {
             return
         }
 
+        let pointerPoint = CGPoint(x: dragPreviewPosition.x + dragPointerOffset.x,
+                                   y: dragPreviewPosition.y + dragPointerOffset.y)
         let isInCenterArea = isPointInCenterArea(
-            point: dragPreviewPosition,
+            point: pointerPoint,
             targetIndex: hoveringIndex,
             containerSize: currentContainerSize,
             pageIndex: appStore.currentPage,

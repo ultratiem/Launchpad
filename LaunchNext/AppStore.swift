@@ -40,7 +40,24 @@ final class AppStore: ObservableObject {
             UserDefaults.standard.set(scrollSensitivity, forKey: "scrollSensitivity")
         }
     }
-    
+
+    @Published var enableDropPrediction: Bool = {
+        if UserDefaults.standard.object(forKey: "enableDropPrediction") == nil { return true }
+        return UserDefaults.standard.bool(forKey: "enableDropPrediction")
+    }() {
+        didSet { UserDefaults.standard.set(enableDropPrediction, forKey: "enableDropPrediction") }
+    }
+
+    @Published var preferredLanguage: AppLanguage = {
+        if let raw = UserDefaults.standard.string(forKey: "preferredLanguage"),
+           let lang = AppLanguage(rawValue: raw) {
+            return lang
+        }
+        return .system
+    }() {
+        didSet { UserDefaults.standard.set(preferredLanguage.rawValue, forKey: "preferredLanguage") }
+    }
+
     // 缓存管理器
     private let cacheManager = AppCacheManager.shared
     
@@ -104,6 +121,9 @@ final class AppStore: ObservableObject {
         // 读取图标缩放默认值
         if let v = UserDefaults.standard.object(forKey: "iconScale") as? Double {
             self.iconScale = v
+        }
+        if UserDefaults.standard.object(forKey: "enableDropPrediction") == nil {
+            UserDefaults.standard.set(true, forKey: "enableDropPrediction")
         }
     }
 
@@ -685,26 +705,21 @@ final class AppStore: ObservableObject {
             copyDescription: nil
         )
 
-        let callback: FSEventStreamCallback = { (streamRef, clientInfo, numEvents, eventPaths, eventFlags, eventIds) in
+        let callback: FSEventStreamCallback = { (_, clientInfo, numEvents, eventPaths, eventFlags, _) in
             guard let info = clientInfo else { return }
-            
-            do {
-                let appStore = Unmanaged<AppStore>.fromOpaque(info).takeUnretainedValue()
+            let appStore = Unmanaged<AppStore>.fromOpaque(info).takeUnretainedValue()
 
-                guard numEvents > 0 else {
-                    appStore.handleFSEvents(paths: [], flagsPointer: eventFlags, count: 0)
-                    return
-                }
-                
-                // With kFSEventStreamCreateFlagUseCFTypes, eventPaths is a CFArray of CFString
-                let cfArray = Unmanaged<CFArray>.fromOpaque(eventPaths).takeUnretainedValue()
-                let nsArray = cfArray as NSArray
-                guard let pathsArray = nsArray as? [String] else { return }
-
-                appStore.handleFSEvents(paths: pathsArray, flagsPointer: eventFlags, count: numEvents)
-            } catch {
-                // 静默处理异常
+            guard numEvents > 0 else {
+                appStore.handleFSEvents(paths: [], flagsPointer: eventFlags, count: 0)
+                return
             }
+
+            // With kFSEventStreamCreateFlagUseCFTypes, eventPaths is a CFArray of CFString
+            let cfArray = Unmanaged<CFArray>.fromOpaque(eventPaths).takeUnretainedValue()
+            let nsArray = cfArray as NSArray
+            guard let pathsArray = nsArray as? [String] else { return }
+
+            appStore.handleFSEvents(paths: pathsArray, flagsPointer: eventFlags, count: numEvents)
         }
 
         let flags = FSEventStreamCreateFlags(kFSEventStreamCreateFlagFileEvents | kFSEventStreamCreateFlagNoDefer | kFSEventStreamCreateFlagUseCFTypes)
@@ -1808,7 +1823,19 @@ final class AppStore: ObservableObject {
             cacheManager.preloadIcons(for: changedAppPaths)
         }
     }
-    
+
+    private var resolvedLanguage: AppLanguage {
+        preferredLanguage == .system ? AppLanguage.resolveSystemDefault() : preferredLanguage
+    }
+
+    func localized(_ key: LocalizationKey) -> String {
+        LocalizationManager.shared.localized(key, language: resolvedLanguage)
+    }
+
+    func localizedLanguageName(for language: AppLanguage) -> String {
+        LocalizationManager.shared.languageDisplayName(for: language, displayLanguage: resolvedLanguage)
+    }
+
     /// 文件夹操作后刷新缓存，确保搜索功能正常工作
     private func refreshCacheAfterFolderOperation() {
         // 直接刷新缓存，确保包含所有应用（包括文件夹内的应用）
