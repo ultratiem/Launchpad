@@ -7,6 +7,8 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     case japanese = "ja"
     case french = "fr"
     case spanish = "es"
+    case german = "de"
+    case russian = "ru"
 
     var id: String { rawValue }
 
@@ -17,6 +19,8 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         if lower.hasPrefix("ja") { return .japanese }
         if lower.hasPrefix("fr") { return .french }
         if lower.hasPrefix("es") { return .spanish }
+        if lower.hasPrefix("de") { return .german }
+        if lower.hasPrefix("ru") { return .russian }
         return .english
     }
 }
@@ -56,6 +60,8 @@ enum LocalizationKey: String {
     case languageNameJapanese
     case languageNameFrench
     case languageNameSpanish
+    case languageNameGerman
+    case languageNameRussian
     case folderNamePlaceholder
     case chooseButton
     case exportPanelMessage
@@ -109,6 +115,8 @@ final class LocalizationManager {
                 .languageNameJapanese: "日语",
                 .languageNameFrench: "法语",
                 .languageNameSpanish: "西班牙语",
+                .languageNameGerman: "德语",
+                .languageNameRussian: "俄语",
                 .folderNamePlaceholder: "Folder Name",
                 .chooseButton: "Choose",
                 .exportPanelMessage: "Choose a destination folder to export LaunchNext data",
@@ -154,6 +162,8 @@ final class LocalizationManager {
                 .languageNameJapanese: "日本語",
                 .languageNameFrench: "フランス語",
                 .languageNameSpanish: "スペイン語",
+                .languageNameGerman: "ドイツ語",
+                .languageNameRussian: "ロシア語",
                 .folderNamePlaceholder: "文件夹名称",
                 .chooseButton: "选择",
                 .exportPanelMessage: "选择一个目标文件夹导出 LaunchNext 数据",
@@ -199,6 +209,8 @@ final class LocalizationManager {
                 .languageNameJapanese: "Japonais",
                 .languageNameFrench: "Français",
                 .languageNameSpanish: "Espagnol",
+                .languageNameGerman: "Allemand",
+                .languageNameRussian: "Russe",
                 .folderNamePlaceholder: "フォルダ名",
                 .chooseButton: "選択",
                 .exportPanelMessage: "LaunchNext のデータを書き出す保存先フォルダを選択してください",
@@ -244,6 +256,8 @@ final class LocalizationManager {
                 .languageNameJapanese: "Japonés",
                 .languageNameFrench: "Francés",
                 .languageNameSpanish: "Español",
+                .languageNameGerman: "Alemán",
+                .languageNameRussian: "Ruso",
                 .folderNamePlaceholder: "Nom du dossier",
                 .chooseButton: "Choisir",
                 .exportPanelMessage: "Choisissez un dossier de destination pour exporter les données LaunchNext",
@@ -289,6 +303,8 @@ final class LocalizationManager {
                 .languageNameJapanese: "日本語",
                 .languageNameFrench: "Français",
                 .languageNameSpanish: "Español",
+                .languageNameGerman: "Deutsch",
+                .languageNameRussian: "Русский",
                 .folderNamePlaceholder: "Nombre de la carpeta",
                 .chooseButton: "Elegir",
                 .exportPanelMessage: "Elige una carpeta de destino para exportar los datos de LaunchNext",
@@ -297,6 +313,100 @@ final class LocalizationManager {
                 .legacyArchivePanelMessage: "Elige un archivo de Launchpad Legacy (.lmy/.zip) o un archivo db",
                 .importSuccessfulTitle: "Importación completada",
                 .importFailedTitle: "Importación fallida",
+                .okButton: "OK"
+            ],
+            .german: [
+                .noAppsFound: "Keine Apps gefunden",
+                .searchPlaceholder: "Suchen",
+                .appTitle: "LaunchNext",
+                .modifiedFrom: "Basierend auf LaunchNow Version 1.3.1",
+                .backgroundHint: "Für den Hintergrundbetrieb LaunchNext im Dock behalten oder mit Tastenkürzeln das Fenster öffnen",
+                .classicMode: "Klassischer Launchpad (Vollbild)",
+                .iconSize: "Symbolgröße",
+                .smaller: "Kleiner",
+                .larger: "Größer",
+                .predictDrop: "Ablageposition vorhersagen",
+                .showLabels: "Beschriftungen unter Symbolen anzeigen",
+                .scrollSensitivity: "Scroll-Empfindlichkeit",
+                .low: "Niedrig",
+                .high: "Hoch",
+                .importSystem: "System-Launchpad importieren",
+                .importLegacy: "Legacy (.lmy) importieren",
+                .importTip: "Tipp: Klicken Sie auf „System-Launchpad importieren“, um das Layout direkt zu übernehmen.",
+                .exportData: "Daten exportieren",
+                .importData: "Daten importieren",
+                .refresh: "Aktualisieren",
+                .resetLayout: "Layout zurücksetzen",
+                .resetAlertTitle: "Layout wirklich zurücksetzen?",
+                .resetAlertMessage: "Dies setzt das Layout vollständig zurück: Alle Ordner werden entfernt, die gespeicherte Reihenfolge gelöscht und alle Apps neu eingelesen. Anpassungen gehen verloren.",
+                .resetConfirm: "Zurücksetzen",
+                .cancel: "Abbrechen",
+                .quit: "Beenden",
+                .languagePickerTitle: "Sprache",
+                .versionPrefix: "v",
+                .languageNameSystem: "Systemsprache",
+                .languageNameEnglish: "Englisch",
+                .languageNameChinese: "Chinesisch",
+                .languageNameJapanese: "Japanisch",
+                .languageNameFrench: "Französisch",
+                .languageNameSpanish: "Spanisch",
+                .languageNameGerman: "Deutsch",
+                .languageNameRussian: "Russisch",
+                .folderNamePlaceholder: "Ordnername",
+                .chooseButton: "Auswählen",
+                .exportPanelMessage: "Wählen Sie einen Zielordner, um die LaunchNext-Daten zu exportieren",
+                .importPrompt: "Importieren",
+                .importPanelMessage: "Wählen Sie einen zuvor aus LaunchNext exportierten Ordner",
+                .legacyArchivePanelMessage: "Wählen Sie ein Legacy-Launchpad-Archiv (.lmy/.zip) oder eine DB-Datei",
+                .importSuccessfulTitle: "Import erfolgreich",
+                .importFailedTitle: "Import fehlgeschlagen",
+                .okButton: "OK"
+            ],
+            .russian: [
+                .noAppsFound: "Приложения не найдены",
+                .searchPlaceholder: "Поиск",
+                .appTitle: "LaunchNext",
+                .modifiedFrom: "Основано на LaunchNow версии 1.3.1",
+                .backgroundHint: "Чтобы работать в фоне, закрепите LaunchNext в Dock или откройте окно сочетанием клавиш",
+                .classicMode: "Классический Launchpad (на весь экран)",
+                .iconSize: "Размер значков",
+                .smaller: "Меньше",
+                .larger: "Больше",
+                .predictDrop: "Предсказывать позицию размещения",
+                .showLabels: "Показывать подписи под значками",
+                .scrollSensitivity: "Чувствительность прокрутки",
+                .low: "Низкая",
+                .high: "Высокая",
+                .importSystem: "Импортировать системный Launchpad",
+                .importLegacy: "Импортировать Legacy (.lmy)",
+                .importTip: "Подсказка: нажмите «Импортировать системный Launchpad», чтобы сразу загрузить текущее расположение.",
+                .exportData: "Экспортировать данные",
+                .importData: "Импортировать данные",
+                .refresh: "Обновить",
+                .resetLayout: "Сбросить раскладку",
+                .resetAlertTitle: "Сбросить раскладку?",
+                .resetAlertMessage: "Раскладка будет полностью сброшена: папки удалятся, порядок очистится, приложения будут просканированы заново. Все настройки будут потеряны.",
+                .resetConfirm: "Сбросить",
+                .cancel: "Отмена",
+                .quit: "Выйти",
+                .languagePickerTitle: "Язык",
+                .versionPrefix: "v",
+                .languageNameSystem: "Следовать системе",
+                .languageNameEnglish: "Английский",
+                .languageNameChinese: "Китайский",
+                .languageNameJapanese: "Японский",
+                .languageNameFrench: "Французский",
+                .languageNameSpanish: "Испанский",
+                .languageNameGerman: "Немецкий",
+                .languageNameRussian: "Русский",
+                .folderNamePlaceholder: "Название папки",
+                .chooseButton: "Выбрать",
+                .exportPanelMessage: "Выберите папку назначения для экспорта данных LaunchNext",
+                .importPrompt: "Импортировать",
+                .importPanelMessage: "Выберите папку, ранее экспортированную из LaunchNext",
+                .legacyArchivePanelMessage: "Выберите архив Legacy Launchpad (.lmy/.zip) или файл db",
+                .importSuccessfulTitle: "Импорт завершён",
+                .importFailedTitle: "Импорт не выполнен",
                 .okButton: "OK"
             ]
         ]
@@ -325,6 +435,10 @@ final class LocalizationManager {
             return "Français"
         case .spanish:
             return "Español"
+        case .german:
+            return "Deutsch"
+        case .russian:
+            return "Русский"
         }
     }
 }

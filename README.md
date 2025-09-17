@@ -1,6 +1,6 @@
 # LaunchNext
 
-**Languages**: [English](README.md) | [中文](i18n/README.zh.md) | [日本語](i18n/README.ja.md) | [Français](i18n/README.fr.md) | [Español](i18n/README.es.md)
+**Languages**: [English](README.md) | [中文](i18n/README.zh.md) | [日本語](i18n/README.ja.md) | [Français](i18n/README.fr.md) | [Español](i18n/README.es.md) | Deutsch | Русский
 
 ## 📥 Download
 
@@ -17,7 +17,7 @@ MacOS Tahoe removed launchpad,and it's so hard to use, it's doesn't use your Bio
 ### What LaunchNext Delivers
 - ✅ **One-click import from old system Launchpad** - directly reads your native Launchpad SQLite database (`/private$(getconf DARWIN_USER_DIR)com.apple.dock.launchpad/db/db`) to perfectly recreate your existing folders, app positions, and layout
 - ✅ **Classic Launchpad experience** - works exactly like the beloved original interface
-- ✅ **Multi-language support** - full internationalization with English, Chinese, Japanese, French, and Spanish
+- ✅ **Multi-language support** - full internationalization with English, Chinese, Japanese, French, Spanish, German, and Russian
 - ✅ **Hide icon labels** - clean, minimalist view when you don't need app names
 - ✅ **Custom icon sizes** - adjust icon dimensions to fit your preferences
 - ✅ **Smart folder management** - create and organize folders just like before
@@ -115,8 +115,15 @@ Reads directly from the system Launchpad database:
    - Or `⌘+B` to build only
 
 ### Command Line Build
+
+**Regular Build:**
 ```bash
 xcodebuild -project LaunchNext.xcodeproj -scheme LaunchNext -configuration Release
+```
+
+**Universal Binary Build (Intel + Apple Silicon):**
+```bash
+xcodebuild -project LaunchNext.xcodeproj -scheme LaunchNext -configuration Release ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO clean build
 ```
 
 ## Usage
