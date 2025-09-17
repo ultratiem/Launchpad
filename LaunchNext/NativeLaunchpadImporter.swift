@@ -193,6 +193,10 @@ class NativeLaunchpadImporter {
                 ? String(cString: sqlite3_column_text(stmt, 2))
                 : ""
 
+            if bundleId == "com.apple.Maps" || bundleId == "com.apple.Music" {
+                print("[Importer][Debug] bundleId=\(bundleId) title=\(title)")
+            }
+
             apps[itemId] = LaunchpadDBApp(
                 itemId: itemId,
                 title: title,
@@ -459,7 +463,7 @@ class NativeLaunchpadImporter {
     private func findLocalApp(bundleId: String, title: String) -> AppInfo? {
         // 优先使用 NSWorkspace 查找
         if let appPath = NSWorkspace.shared.absolutePathForApplication(withBundleIdentifier: bundleId) {
-            return AppInfo.from(url: URL(fileURLWithPath: appPath))
+            return AppInfo.from(url: URL(fileURLWithPath: appPath), preferredName: title)
         }
 
         // 备用方案：在常见路径中搜索
@@ -492,12 +496,12 @@ class NativeLaunchpadImporter {
                 if let bundle = Bundle(url: url) {
                     // 精确匹配 bundle ID
                     if bundle.bundleIdentifier == bundleId {
-                        return AppInfo.from(url: url)
+                        return AppInfo.from(url: url, preferredName: title)
                     }
                     // 备用：名称匹配
                     if let appName = bundle.infoDictionary?["CFBundleName"] as? String,
                        appName == title {
-                        return AppInfo.from(url: url)
+                        return AppInfo.from(url: url, preferredName: title)
                     }
                 }
             }

@@ -917,9 +917,7 @@ final class AppStore: ObservableObject {
     }
 
     private func appInfo(from url: URL) -> AppInfo {
-        let name = url.deletingPathExtension().lastPathComponent
-        let icon = NSWorkspace.shared.icon(forFile: url.path)
-        return AppInfo(name: name, icon: icon, url: url)
+        AppInfo.from(url: url)
     }
     
     // MARK: - 文件夹管理
