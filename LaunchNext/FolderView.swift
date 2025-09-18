@@ -291,6 +291,7 @@ extension FolderView {
             labelWidth: labelWidth,
             isSelected: isSelected,
             showLabel: appStore.showLabels,
+            labelFontSize: CGFloat(appStore.iconLabelFontSize),
             shouldAllowHover: draggingApp == nil,
             onTap: { 
                 // 在编辑状态下不启动应用

@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 import SwiftData
 import Combine
+import QuartzCore
 
 extension Notification.Name {
     static let launchpadWindowShown = Notification.Name("LaunchpadWindowShown")
@@ -30,6 +31,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
     let appStore = AppStore()
     var modelContainer: ModelContainer?
     private var isTerminating = false
+    private var windowIsVisible = false
+    private var isAnimatingWindow = false
+    private var pendingShow = false
+    private var pendingHide = false
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         Self.shared = self
@@ -84,51 +89,26 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
         }
         
         applyCornerRadius()
-        window?.orderFrontRegardless()
-        window?.makeKey()
-        lastShowAt = Date()
-        NotificationCenter.default.post(name: .launchpadWindowShown, object: nil)
-        
+        window?.alphaValue = 0
+        window?.contentView?.alphaValue = 0
+        windowIsVisible = false
+
+        // 初始化完成后执行首个淡入
+        showWindow()
+
         // 背景点击关闭逻辑改为 SwiftUI 内部实现，避免与输入控件冲突
     }
     
     func showWindow() {
-        guard let window = window else { return }
-        let screen = getCurrentActiveScreen() ?? NSScreen.main!
-        let rect = appStore.isFullscreenMode ? screen.frame : calculateContentRect(for: screen)
-        window.setFrame(rect, display: true)
-        applyCornerRadius()
-        window.alphaValue = 0
-        window.makeKey()
-        lastShowAt = Date()
-        NotificationCenter.default.post(name: .launchpadWindowShown, object: nil)
-        window.makeKeyAndOrderFront(nil)
-        window.collectionBehavior = [.transient, .canJoinAllApplications, .fullScreenAuxiliary, .ignoresCycle]
-        window.orderFrontRegardless()
-        NSAnimationContext.runAnimationGroup { ctx in
-            ctx.duration = 0.25
-            window.animator().alphaValue = 1
-            window.contentView?.animator().alphaValue = 1
-        }
+        pendingShow = true
+        pendingHide = false
+        startPendingWindowTransition()
     }
     
     func hideWindow() {
-        guard let window = window else { return }
-        NSAnimationContext.runAnimationGroup({ ctx in
-            ctx.duration = 0.25
-            window.animator().alphaValue = 0
-            window.contentView?.animator().alphaValue = 0
-        }, completionHandler: {
-            window.orderOut(nil)
-            window.alphaValue = 1
-            window.contentView?.alphaValue = 1
-        })
-        appStore.isSetting = false
-        appStore.currentPage = 0
-        appStore.searchText = ""
-        appStore.openFolder = nil
-        appStore.saveAllOrder()
-        NotificationCenter.default.post(name: .launchpadWindowHidden, object: nil)
+        pendingHide = true
+        pendingShow = false
+        startPendingWindowTransition()
     }
 
     // MARK: - Quit with fade
@@ -136,13 +116,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
         guard !isTerminating else { NSApp.terminate(nil); return }
         isTerminating = true
         if let window = window {
-            NSAnimationContext.runAnimationGroup({ ctx in
-                ctx.duration = 0.25
-                window.animator().alphaValue = 0
-                window.contentView?.animator().alphaValue = 0
-            }, completionHandler: {
+            pendingShow = false
+            pendingHide = false
+            animateWindow(to: 0, resumePending: false) {
+                window.orderOut(nil)
+                window.alphaValue = 1
+                window.contentView?.alphaValue = 1
                 NSApp.terminate(nil)
-            })
+            }
         } else {
             NSApp.terminate(nil)
         }
@@ -180,6 +161,98 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
     private func getCurrentActiveScreen() -> NSScreen? {
         let mouse = NSEvent.mouseLocation
         return NSScreen.screens.first { $0.frame.contains(mouse) }
+    }
+
+    // MARK: - Window animation helpers
+
+    private func startPendingWindowTransition() {
+        guard !isAnimatingWindow else { return }
+        if pendingShow {
+            performShowWindow()
+        } else if pendingHide {
+            performHideWindow()
+        }
+    }
+
+    private func performShowWindow() {
+        pendingShow = false
+        guard let window = window else { return }
+
+        if windowIsVisible && !isAnimatingWindow && window.alphaValue >= 0.99 {
+            return
+        }
+
+        let screen = getCurrentActiveScreen() ?? NSScreen.main!
+        let rect = appStore.isFullscreenMode ? screen.frame : calculateContentRect(for: screen)
+        window.setFrame(rect, display: true)
+        applyCornerRadius()
+
+        if window.alphaValue <= 0.01 || !windowIsVisible {
+            window.alphaValue = 0
+            window.contentView?.alphaValue = 0
+        }
+
+        window.makeKeyAndOrderFront(nil)
+        window.collectionBehavior = [.transient, .canJoinAllApplications, .fullScreenAuxiliary, .ignoresCycle]
+        window.orderFrontRegardless()
+
+        lastShowAt = Date()
+        windowIsVisible = true
+        NotificationCenter.default.post(name: .launchpadWindowShown, object: nil)
+
+        animateWindow(to: 1) {
+            self.windowIsVisible = true
+        }
+    }
+
+    private func performHideWindow() {
+        pendingHide = false
+        guard let window = window else { return }
+
+        let finalize: () -> Void = {
+            self.windowIsVisible = false
+            window.orderOut(nil)
+            window.alphaValue = 1
+            window.contentView?.alphaValue = 1
+            self.appStore.isSetting = false
+            self.appStore.currentPage = 0
+            self.appStore.searchText = ""
+            self.appStore.openFolder = nil
+            self.appStore.saveAllOrder()
+            NotificationCenter.default.post(name: .launchpadWindowHidden, object: nil)
+        }
+
+        if (!windowIsVisible && window.alphaValue <= 0.01) || isTerminating {
+            finalize()
+            return
+        }
+
+        animateWindow(to: 0) {
+            finalize()
+        }
+    }
+
+    private func animateWindow(to targetAlpha: CGFloat, resumePending: Bool = true, completion: (() -> Void)? = nil) {
+        guard let window = window else {
+            completion?()
+            return
+        }
+
+        isAnimatingWindow = true
+        NSAnimationContext.runAnimationGroup({ ctx in
+            ctx.duration = 0.25
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            window.animator().alphaValue = targetAlpha
+            window.contentView?.animator().alphaValue = targetAlpha
+        }, completionHandler: {
+            window.alphaValue = targetAlpha
+            window.contentView?.alphaValue = targetAlpha
+            self.isAnimatingWindow = false
+            completion?()
+            if resumePending {
+                self.startPendingWindowTransition()
+            }
+        })
     }
     
     func windowWillResize(_ sender: NSWindow, to frameSize: NSSize) -> NSSize {

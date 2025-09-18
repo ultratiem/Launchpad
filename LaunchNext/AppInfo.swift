@@ -19,15 +19,36 @@ struct AppInfo: Identifiable, Equatable, Hashable {
     }
 
     // MARK: - 创建 AppInfo
-    static func from(url: URL, preferredName: String? = nil) -> AppInfo {
-        let name = localizedAppName(for: url, preferredName: preferredName)
+    static func from(url: URL, preferredName: String? = nil, customTitle: String? = nil) -> AppInfo {
+        let fallbackName = normalizeCandidate(url.deletingPathExtension().lastPathComponent)
+        let bundle = Bundle(url: url)
+        let localizedName = localizedAppName(for: url,
+                                             preferredName: preferredName,
+                                             fallbackName: fallbackName,
+                                             bundle: bundle)
+        let englishName = englishAppName(preferredName: preferredName,
+                                         fallbackName: fallbackName,
+                                         bundle: bundle)
+
+        let shouldUseLocalized = shouldUseLocalizedTitles()
+        let chosenName = shouldUseLocalized ? localizedName : englishName
         let icon = NSWorkspace.shared.icon(forFile: url.path)
-        return AppInfo(name: name, icon: icon, url: url)
+
+        if let override = customTitle.flatMap({ title -> String? in
+            let normalized = normalizeCandidate(title)
+            return normalized.isEmpty ? nil : normalized
+        }) {
+            return AppInfo(name: override, icon: icon, url: url)
+        }
+
+        return AppInfo(name: chosenName, icon: icon, url: url)
     }
 
     // MARK: - 获取本地化应用名
-    private static func localizedAppName(for url: URL, preferredName: String?) -> String {
-        let fallbackName = normalizeCandidate(url.deletingPathExtension().lastPathComponent)
+    private static func localizedAppName(for url: URL,
+                                         preferredName: String?,
+                                         fallbackName: String,
+                                         bundle: Bundle?) -> String {
         var resolvedName: String? = nil
 
         func consider(_ rawValue: String?, source: String) {
@@ -61,7 +82,7 @@ struct AppInfo: Identifiable, Equatable, Hashable {
             }
         }
 
-        if let bundle = Bundle(url: url) {
+        if let bundle {
             consider(localizedInfoValue(for: "CFBundleDisplayName", in: bundle), source: "InfoPlist.strings CFBundleDisplayName")
             consider(localizedInfoValue(for: "CFBundleName", in: bundle), source: "InfoPlist.strings CFBundleName")
             consider(bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String, source: "Info.plist CFBundleDisplayName")
@@ -83,7 +104,62 @@ struct AppInfo: Identifiable, Equatable, Hashable {
 
         consider(FileManager.default.displayName(atPath: url.path), source: "FileManager.displayName")
 
+        if resolvedName == nil {
+            // Fall back to the persisted title only when we fail to resolve a localized display name.
+            consider(preferredName, source: "preferredName")
+        }
+
         return resolvedName ?? fallbackName
+    }
+
+    private static func englishAppName(preferredName: String?,
+                                       fallbackName: String,
+                                       bundle: Bundle?) -> String {
+        var candidates: [String] = []
+
+        if let bundle {
+            let englishLocales = ["en", "en-US", "en-GB"]
+            for locale in englishLocales {
+                if let path = bundle.path(forResource: "InfoPlist",
+                                           ofType: "strings",
+                                           inDirectory: nil,
+                                           forLocalization: locale),
+                   let dict = NSDictionary(contentsOfFile: path) as? [String: String] {
+                    for key in ["CFBundleDisplayName", "CFBundleName"] {
+                        if let value = dict[key], !value.isEmpty {
+                            candidates.append(value)
+                        }
+                    }
+                }
+            }
+
+            for key in ["CFBundleDisplayName", "CFBundleName"] {
+                if let value = bundle.infoDictionary?[key] as? String, !value.isEmpty {
+                    candidates.append(value)
+                }
+            }
+        }
+
+        if let preferredName, !preferredName.isEmpty {
+            candidates.append(preferredName)
+        }
+
+        for raw in candidates {
+            let normalized = normalizeCandidate(raw)
+            if !normalized.isEmpty {
+                return normalized
+            }
+        }
+
+        return fallbackName
+    }
+
+    private static func shouldUseLocalizedTitles() -> Bool {
+        let defaults = UserDefaults.standard
+        if defaults.object(forKey: "useLocalizedThirdPartyTitles") == nil {
+            return true
+        }
+        return defaults.bool(forKey: "useLocalizedThirdPartyTitles")
     }
 
     private static func normalizeCandidate(_ value: String) -> String {

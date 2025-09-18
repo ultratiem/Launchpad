@@ -6,7 +6,10 @@
 
 **[Télécharger ici](https://github.com/RoversX/LaunchNext/releases/latest)** - Obtenez la dernière version
 
-![LaunchNext Banner](../public/banner.png)
+| | |
+|:---:|:---:|
+| ![](../public/banner.webp) | ![](../public/setting1.webp) |
+| ![](../public/setting2.webp) | ![](../public/setting3.webp) |
 
 macOS Tahoe a supprimé le Launchpad, et la nouvelle interface est difficile à utiliser, elle n'utilise pas pleinement votre Bio GPU. Apple, donnez au moins aux utilisateurs une option pour revenir en arrière. En attendant, voici LaunchNext.
 

@@ -2,158 +2,691 @@ import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
 import SwiftData
+import MachO
+import Darwin
 
 struct SettingsView: View {
     @ObservedObject var appStore: AppStore
     @State private var showResetConfirm = false
+    @State private var selectedSection: SettingsSection = .general
+    @State private var titleSearch: String = ""
+    @State private var editingDrafts: [String: String] = [:]
+    @State private var editingEntries: Set<String> = []
+    @State private var iconImportError: String? = nil
 
     var body: some View {
-        VStack {
-            HStack(alignment: .firstTextBaseline) {
-                Text(appStore.localized(.appTitle))
-                    .font(.title)
-                Text("\(appStore.localized(.versionPrefix))\(getVersion())")
-                    .font(.footnote)
-                Spacer()
-                Button {
-                    appStore.isSetting = false
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.title2.bold())
-                        .foregroundStyle(.placeholder)
+        ZStack(alignment: .topTrailing) {
+            NavigationSplitView {
+                List(selection: $selectedSection) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(appStore.localized(.appTitle))
+                            .font(.headline.weight(.semibold))
+                        Text("\(appStore.localized(.versionPrefix))\(getVersion())")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 8)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 10))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+
+                    ForEach(SettingsSection.allCases) { section in
+                        HStack(spacing: 8) {
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .fill(section.iconGradient)
+                                .overlay(
+                                    Image(systemName: section.iconName)
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.white)
+                                )
+                                .frame(width: 24, height: 24)
+                                .glassEffect()
+
+                            Text(appStore.localized(section.localizationKey))
+                                .font(.callout.weight(.medium))
+                        }
+                        .padding(.vertical, 2)
+                        .tag(section)
+                    }
                 }
-                .buttonStyle(.plain)
+                .listStyle(.sidebar)
+                .scrollContentBackground(.hidden)
+                .background(.ultraThinMaterial)
+                .navigationSplitViewColumnWidth(min: 180, ideal: 205, max: 250)
+            } detail: {
+                detailView(for: selectedSection)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .padding()
-            
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(.ultraThinMaterial)
+
+            Button {
+                appStore.isSetting = false
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.title2.bold())
+                    .foregroundStyle(.secondary)
+                    .padding(8)
+                    .background(
+                        Circle()
+                            .fill(.ultraThinMaterial)
+                            .glassEffect()
+                    )
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 12)
+            .padding(.trailing, 16)
+        }
+        .frame(minWidth: 820, minHeight: 640)
+        .alert(appStore.localized(.customIconTitle), isPresented: Binding(get: { iconImportError != nil }, set: { if !$0 { iconImportError = nil } })) {
+            Button(appStore.localized(.okButton), role: .cancel) { iconImportError = nil }
+        } message: {
+            Text(iconImportError ?? "")
+        }
+    }
+
+    private func getVersion() -> String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "未知"
+    }
+
+private enum SettingsSection: String, CaseIterable, Identifiable {
+    case general
+    case appearance
+    case performance
+    case titles
+    case development
+    case about
+
+    var id: String { rawValue }
+
+    var iconName: String {
+        switch self {
+        case .general: return "gearshape"
+        case .appearance: return "paintbrush"
+        case .performance: return "speedometer"
+        case .titles: return "text.badge.plus"
+        case .development: return "hammer"
+        case .about: return "info.circle"
+        }
+    }
+
+    var iconGradient: LinearGradient {
+        let colors: [Color]
+        switch self {
+        case .general:
+            colors = [Color(red: 0.12, green: 0.52, blue: 0.96), Color(red: 0.22, green: 0.72, blue: 0.94)]
+        case .appearance:
+            colors = [Color(red: 0.73, green: 0.25, blue: 0.96), Color(red: 0.98, green: 0.43, blue: 0.80)]
+        case .performance:
+            colors = [Color(red: 0.02, green: 0.70, blue: 0.46), Color(red: 0.31, green: 0.93, blue: 0.69)]
+        case .titles:
+            colors = [Color(red: 0.95, green: 0.37, blue: 0.32), Color(red: 0.98, green: 0.55, blue: 0.44)]
+        case .development:
+            colors = [Color(red: 0.98, green: 0.58, blue: 0.16), Color(red: 0.96, green: 0.20, blue: 0.24)]
+        case .about:
+            colors = [Color(red: 0.54, green: 0.55, blue: 0.70), Color(red: 0.42, green: 0.44, blue: 0.60)]
+        }
+        return LinearGradient(gradient: Gradient(colors: colors), startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+
+    var localizationKey: LocalizationKey {
+        switch self {
+        case .general: return .settingsSectionGeneral
+        case .appearance: return .settingsSectionAppearance
+        case .performance: return .settingsSectionPerformance
+        case .titles: return .settingsSectionTitles
+        case .development: return .settingsSectionDevelopment
+        case .about: return .settingsSectionAbout
+        }
+    }
+}
+    @ViewBuilder
+    private func detailView(for section: SettingsSection) -> some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .top) {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                    .frame(height: 160)
+                    .mask(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color.white.opacity(1), Color.white.opacity(0)]),
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .allowsHitTesting(false)
+
+                VStack(alignment: .leading, spacing: 16) {
+                    Text(appStore.localized(section.localizationKey))
+                        .font(.title3.bold())
+
+                    ScrollView(showsIndicators: false) {
+                        VStack(alignment: .leading, spacing: 24) {
+                            content(for: section)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .scrollBounceBehavior(.basedOnSize)
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 16)
+                .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
+            }
+            .background(.ultraThinMaterial)
+        }
+    }
+
+    @ViewBuilder
+    private func content(for section: SettingsSection) -> some View {
+        switch section {
+        case .general:
+            generalSection
+        case .appearance:
+            appearanceSection
+        case .titles:
+            titlesSection
+        case .performance:
+            performanceSection
+        case .development:
+            developmentSection
+        case .about:
+            aboutSection
+        }
+    }
+
+    private var developmentSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(appStore.localized(.developmentPlaceholderTitle))
+                .font(.headline)
+            Text(appStore.localized(.developmentPlaceholderSubtitle))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 6) {
+                Image(systemName: "memorychip")
+                Text(currentMemoryUsageString())
+            }
+            .font(.caption.monospacedDigit())
+            .foregroundStyle(.secondary)
+
+            Toggle(appStore.localized(.showFPSOverlay), isOn: $appStore.showFPSOverlay)
+                .toggleStyle(.switch)
+            Text(appStore.localized(.showFPSOverlayDisclaimer))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var performanceSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(appStore.localized(.performancePlaceholderTitle))
+                .font(.headline)
+            Text(appStore.localized(.performancePlaceholderSubtitle))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var titlesSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text(appStore.localized(.modifiedFrom))
+                Button {
+                    presentCustomTitlePicker()
+                } label: {
+                    Label(appStore.localized(.customTitleAddButton), systemImage: "plus")
+                }
+                Spacer()
+            }
+
+            let allEntries = customTitleEntries
+            let filtered = filteredCustomTitleEntries
+
+            if allEntries.isEmpty {
+                customTitleEmptyState
+            } else {
+                Text(appStore.localized(.customTitleHint))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+
+                TextField("", text: $titleSearch, prompt: Text(appStore.localized(.renameSearchPlaceholder)))
+                    .textFieldStyle(.roundedBorder)
+
+                if filtered.isEmpty {
+                    Text(appStore.localized(.customTitleNoResults))
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, minHeight: 120, alignment: .center)
+                } else {
+                    VStack(spacing: 12) {
+                        ForEach(filtered) { entry in
+                            customTitleRow(for: entry)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var customTitleEntries: [CustomTitleEntry] {
+        appStore.customTitles
+            .map { (path, _) in
+                let info = appStore.appInfoForCustomTitle(path: path)
+                let defaultName = appStore.defaultDisplayName(for: path)
+                return CustomTitleEntry(id: path, appInfo: info, defaultName: defaultName)
+            }
+            .sorted { lhs, rhs in
+                lhs.appInfo.name.localizedCaseInsensitiveCompare(rhs.appInfo.name) == .orderedAscending
+            }
+    }
+
+    private var filteredCustomTitleEntries: [CustomTitleEntry] {
+        let base = customTitleEntries
+        let trimmed = titleSearch.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return base }
+        let query = trimmed.lowercased()
+        return base.filter { entry in
+            let custom = entry.appInfo.name.lowercased()
+            if custom.contains(query) { return true }
+            if entry.defaultName.lowercased().contains(query) { return true }
+            if entry.id.lowercased().contains(query) { return true }
+            return false
+        }
+    }
+
+    private var customTitleEmptyState: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(appStore.localized(.customTitleEmptyTitle))
+                .font(.headline)
+            Text(appStore.localized(.customTitleEmptySubtitle))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            Button {
+                presentCustomTitlePicker()
+            } label: {
+                Label(appStore.localized(.customTitleAddButton), systemImage: "plus")
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func customTitleRow(for entry: CustomTitleEntry) -> some View {
+        let isEditing = editingEntries.contains(entry.id)
+        let currentDraft = editingDrafts[entry.id] ?? appStore.customTitles[entry.id] ?? entry.appInfo.name
+        let trimmedDraft = currentDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        let originalValue = appStore.customTitles[entry.id] ?? entry.defaultName
+        let draftBinding = Binding(
+            get: { editingDrafts[entry.id] ?? appStore.customTitles[entry.id] ?? entry.appInfo.name },
+            set: { editingDrafts[entry.id] = $0 }
+        )
+
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 12) {
+                Image(nsImage: entry.appInfo.icon)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 40, height: 40)
+                    .cornerRadius(10)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(entry.appInfo.name)
+                        .font(.callout.weight(.semibold))
+                    Text(String(format: appStore.localized(.customTitleDefaultFormat), entry.defaultName))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                HStack(spacing: 10) {
+                    if isEditing {
+                        Button(appStore.localized(.customTitleSave)) {
+                            saveCustomTitle(entry)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(trimmedDraft.isEmpty || trimmedDraft == originalValue)
+
+                        Button(appStore.localized(.customTitleCancel)) {
+                            cancelEditing(entry)
+                        }
+                        .buttonStyle(.bordered)
+
+                        if !(appStore.customTitles[entry.id]?.isEmpty ?? true) {
+                            Button(role: .destructive) {
+                                removeCustomTitle(entry)
+                            } label: {
+                                Text(appStore.localized(.customTitleDelete))
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                    } else {
+                        Button(appStore.localized(.customTitleEdit)) {
+                            beginEditing(entry)
+                        }
+                        .buttonStyle(.bordered)
+
+                        if !(appStore.customTitles[entry.id]?.isEmpty ?? true) {
+                            Button(role: .destructive) {
+                                removeCustomTitle(entry)
+                            } label: {
+                                Text(appStore.localized(.customTitleDelete))
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                    }
+                }
+            }
+
+            if isEditing {
+                TextField("", text: draftBinding, prompt: Text(appStore.localized(.customTitlePlaceholder)))
+                    .textFieldStyle(.roundedBorder)
+            }
+        }
+        .padding(14)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func presentCustomTitlePicker() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedFileTypes = ["app"]
+        panel.title = appStore.localized(.customTitleAddButton)
+        panel.message = appStore.localized(.customTitlePickerMessage)
+        panel.prompt = appStore.localized(.chooseButton)
+
+        if panel.runModal() == .OK, let url = panel.url, let info = appStore.ensureCustomTitleEntry(for: url) {
+            let path = info.url.path
+            editingEntries.insert(path)
+            editingDrafts[path] = appStore.customTitles[path] ?? info.name
+        }
+    }
+
+    private func presentAppIconPicker() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.icns, .png, .jpeg, .tiff]
+        panel.prompt = appStore.localized(.customIconChoose)
+        panel.title = appStore.localized(.customIconTitle)
+
+        if panel.runModal() == .OK, let url = panel.url {
+            if !appStore.setCustomAppIcon(from: url) {
+                iconImportError = appStore.localized(.customIconError)
+            }
+        }
+    }
+
+    private struct CustomTitleEntry: Identifiable {
+        let id: String
+        let appInfo: AppInfo
+        let defaultName: String
+    }
+
+    private func beginEditing(_ entry: CustomTitleEntry) {
+        editingEntries.insert(entry.id)
+        editingDrafts[entry.id] = appStore.customTitles[entry.id] ?? entry.appInfo.name
+    }
+
+    private func cancelEditing(_ entry: CustomTitleEntry) {
+        editingEntries.remove(entry.id)
+        editingDrafts.removeValue(forKey: entry.id)
+    }
+
+    private func saveCustomTitle(_ entry: CustomTitleEntry) {
+        let draft = (editingDrafts[entry.id] ?? appStore.customTitles[entry.id] ?? entry.appInfo.name)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !draft.isEmpty else { return }
+        let original = appStore.customTitles[entry.id] ?? entry.defaultName
+        if draft == original {
+            editingEntries.remove(entry.id)
+            editingDrafts.removeValue(forKey: entry.id)
+            return
+        }
+        appStore.setCustomTitle(draft, for: entry.appInfo)
+        editingEntries.remove(entry.id)
+        editingDrafts.removeValue(forKey: entry.id)
+    }
+
+    private func removeCustomTitle(_ entry: CustomTitleEntry) {
+        appStore.clearCustomTitle(for: entry.appInfo)
+        editingEntries.remove(entry.id)
+        editingDrafts.removeValue(forKey: entry.id)
+    }
+
+    private var aboutSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(appStore.localized(.appTitle))
+                        .font(.title2.weight(.semibold))
+                    Text("\(appStore.localized(.versionPrefix))\(getVersion())")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Text(appStore.localized(.modifiedFrom))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
             }
-            .padding(.horizontal)
-            .padding(.bottom, 4)
-            
-            VStack {
-                HStack {
-                    Text(appStore.localized(.backgroundHint))
-                    Spacer()
-                }
-            }
-            .padding()
 
             Divider()
-            
-            VStack {
-                HStack {
-                    Text(appStore.localized(.classicMode))
-                    Spacer()
-                    Toggle(isOn: $appStore.isFullscreenMode) {
-                        
-                    }
-                    .toggleStyle(.switch)
-                }
-                HStack {
-                    Text(appStore.localized(.iconSize))
-                    VStack {
-                        Slider(value: $appStore.iconScale, in: 0.8...1.1)
-                        HStack {
-                            Text(appStore.localized(.smaller)).font(.footnote)
-                            Spacer()
-                            Text(appStore.localized(.larger)).font(.footnote)
-                        }
-                    }
-                }
-                HStack {
-                    Text(appStore.localized(.predictDrop))
-                    Spacer()
-                    Toggle(isOn: $appStore.enableDropPrediction) { }
-                        .toggleStyle(.switch)
-                }
-                HStack {
-                    Text(appStore.localized(.showLabels))
-                    Spacer()
-                    Toggle(isOn: $appStore.showLabels) { }
-                        .toggleStyle(.switch)
-                }
-                HStack {
-                    Text(appStore.localized(.scrollSensitivity))
-                    VStack {
-                        Slider(value: $appStore.scrollSensitivity, in: 0.01...0.99)
-                        HStack {
-                            Text(appStore.localized(.low))
-                                .font(.footnote)
-                            Spacer()
-                            Text(appStore.localized(.high))
-                                .font(.footnote)
-                        }
-                    }
-                }
-                HStack {
-                    Text(appStore.localized(.languagePickerTitle))
-                    Spacer()
-                    Picker(appStore.localized(.languagePickerTitle), selection: $appStore.preferredLanguage) {
-                        ForEach(AppLanguage.allCases) { language in
-                            Text(appStore.localizedLanguageName(for: language)).tag(language)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                }
-            }
-            .padding()
 
-            Divider()
-            
             VStack(alignment: .leading, spacing: 8) {
-                // Row 1: System + Legacy
+                Text(appStore.localized(.backgroundHint))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
+                TicTacToeBoard()
+                    .frame(width: 130)
+            }
+
+            // 更新检查
+            updateCheckSection
+
+            Link(destination: URL(string: "https://github.com/RoversX/LaunchNext")!) {
+                Label(appStore.localized(.viewOnGitHub), systemImage: "arrow.up.right.square")
+            }
+            .buttonStyle(.link)
+        }
+    }
+
+    // MARK: - Inline Games
+    private struct TicTacToeBoard: View {
+        private enum Mark: String {
+            case x = "X", o = "O", empty = ""
+        }
+
+        @State private var cells: [Mark] = Array(repeating: .empty, count: 9)
+        @State private var isPlayerTurn: Bool = true
+        @State private var statusText: String = "Your turn"
+        @State private var gameOver: Bool = false
+
+        var body: some View {
+            VStack(spacing: 12) {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
+                    ForEach(0..<9) { index in
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(Color.secondary.opacity(0.12))
+                            Text(cells[index].rawValue)
+                                .font(.system(size: 28, weight: .bold))
+                        }
+                        .aspectRatio(1, contentMode: .fit)
+                        .onTapGesture {
+                            guard !gameOver, isPlayerTurn, cells[index] == .empty else { return }
+                            makeMove(at: index, mark: .x)
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                aiTurn()
+                            }
+                        }
+                    }
+                }
+                Text(statusText)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
+                Button(action: resetGame) {
+                    Label("Reset", systemImage: "arrow.counterclockwise")
+                }
+                .buttonStyle(.bordered)
+            }
+        }
+
+        private func makeMove(at index: Int, mark: Mark) {
+            cells[index] = mark
+            if let winner = evaluateWinner() {
+                statusText = winner == .x ? "You win!" : "AI wins!"
+                gameOver = true
+            } else if !cells.contains(.empty) {
+                statusText = "Draw"
+                gameOver = true
+            } else {
+                isPlayerTurn.toggle()
+                statusText = isPlayerTurn ? "Your turn" : "AI thinking..."
+            }
+        }
+
+        private func aiTurn() {
+            guard !gameOver else { return }
+            guard !isPlayerTurn else { return }
+
+            let emptyCells = cells.enumerated().filter { $0.element == .empty }.map { $0.offset }
+            guard let choice = emptyCells.randomElement() else { return }
+            makeMove(at: choice, mark: .o)
+        }
+
+        private func evaluateWinner() -> Mark? {
+            let lines = [
+                [0,1,2],[3,4,5],[6,7,8],
+                [0,3,6],[1,4,7],[2,5,8],
+                [0,4,8],[2,4,6]
+            ]
+            for line in lines {
+                let marks = line.map { cells[$0] }
+                if marks.allSatisfy({ $0 == .x }) { return .x }
+                if marks.allSatisfy({ $0 == .o }) { return .o }
+            }
+            return nil
+        }
+
+        private func resetGame() {
+            cells = Array(repeating: .empty, count: 9)
+            isPlayerTurn = true
+            statusText = "Your turn"
+            gameOver = false
+        }
+    }
+
+    private func currentMemoryUsageString() -> String {
+        var info = task_vm_info_data_t()
+        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size) / 4
+        let kern = withUnsafeMutablePointer(to: &info) { pointer -> kern_return_t in
+            pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
+            }
+        }
+
+        guard kern == KERN_SUCCESS else { return "Memory: --" }
+
+        let usedBytes = info.phys_footprint
+        let formatter = ByteCountFormatter()
+        formatter.allowedUnits = [.useMB, .useGB]
+        formatter.countStyle = .memory
+        let formatted = formatter.string(fromByteCount: Int64(usedBytes))
+        return "Memory: \(formatted)"
+    }
+
+    private var generalSection: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(appStore.localized(.languagePickerTitle))
+                    .font(.headline)
+                Picker(appStore.localized(.languagePickerTitle), selection: $appStore.preferredLanguage) {
+                    ForEach(AppLanguage.allCases) { language in
+                        Text(appStore.localizedLanguageName(for: language)).tag(language)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text(appStore.localized(.customIconTitle))
+                    .font(.headline)
+                HStack(spacing: 16) {
+                    Image(nsImage: appStore.currentAppIcon)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 72, height: 72)
+                        .cornerRadius(16)
+                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.1)))
+                        .shadow(radius: 6, y: 3)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Button(appStore.localized(.customIconChoose)) {
+                            presentAppIconPicker()
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button(appStore.localized(.customIconReset)) {
+                            appStore.resetCustomAppIcon()
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.red)
+                        .disabled(!appStore.hasCustomAppIcon)
+                    }
+                }
+
+                Text(appStore.localized(.customIconHint))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text(appStore.localized(.importSystem))
+                    .font(.headline)
                 HStack(spacing: 12) {
                     Button { importFromLaunchpad() } label: {
                         Label(appStore.localized(.importSystem), systemImage: "square.and.arrow.down.on.square")
                     }
                     .help(appStore.localized(.importTip))
-                    .frame(maxWidth: .infinity, alignment: .leading)
 
                     Button { importLegacyArchive() } label: {
                         Label(appStore.localized(.importLegacy), systemImage: "clock.arrow.circlepath")
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                HStack {
-                    Text(appStore.localized(.importTip))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                }
+                Text(appStore.localized(.importTip))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
 
-                // Row 2: Export + Import Data Folder
                 HStack(spacing: 12) {
                     Button { exportDataFolder() } label: {
                         Label(appStore.localized(.exportData), systemImage: "square.and.arrow.up")
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
 
                     Button { importDataFolder() } label: {
                         Label(appStore.localized(.importData), systemImage: "square.and.arrow.down")
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-            
+
             Divider()
 
             HStack {
-                Button {
-                    appStore.refresh()
-                } label: {
+                Button { appStore.refresh() } label: {
                     Label(appStore.localized(.refresh), systemImage: "arrow.clockwise")
                 }
-
                 Spacer()
-
                 Button {
                     showResetConfirm = true
                 } label: {
@@ -166,7 +699,6 @@ struct SettingsView: View {
                 } message: {
                     Text(appStore.localized(.resetAlertMessage))
                 }
-                                
                 Button {
                     AppDelegate.shared?.quitWithFade()
                 } label: {
@@ -174,14 +706,118 @@ struct SettingsView: View {
                         .foregroundStyle(Color.red)
                 }
             }
-            .padding()
-
         }
-        .padding()
     }
-    
-    func getVersion() -> String {
-            return Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "未知"
+
+    private var appearanceSection: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text(appStore.localized(.classicMode))
+                    Spacer()
+                    Toggle("", isOn: $appStore.isFullscreenMode)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                }
+
+                HStack {
+                    Text(appStore.localized(.showLabels))
+                    Spacer()
+                    Toggle("", isOn: $appStore.showLabels)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                }
+
+                HStack {
+                    Text(appStore.localized(.useLocalizedThirdPartyTitles))
+                    Spacer()
+                    Toggle("", isOn: $appStore.useLocalizedThirdPartyTitles)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                }
+
+                HStack {
+                    Text(appStore.localized(.predictDrop))
+                    Spacer()
+                    Toggle("", isOn: $appStore.enableDropPrediction)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                }
+
+                HStack {
+                    Text(appStore.localized(.enableAnimations))
+                    Spacer()
+                    Toggle("", isOn: $appStore.enableAnimations)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                }
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(appStore.localized(.animationDurationLabel))
+                        .font(.headline)
+                    Slider(value: $appStore.animationDuration, in: 0.1...1.0, step: 0.05)
+                        .disabled(!appStore.enableAnimations)
+                    HStack {
+                        Text("0.1s").font(.footnote)
+                        Spacer()
+                        Text(String(format: "%.2fs", appStore.animationDuration))
+                            .font(.footnote)
+                        Spacer()
+                        Text("1.0s").font(.footnote)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(appStore.localized(.iconSize))
+                        .font(.headline)
+                    Slider(value: $appStore.iconScale, in: 0.8...1.1)
+                    HStack {
+                        Text(appStore.localized(.smaller)).font(.footnote)
+                        Spacer()
+                        Text(appStore.localized(.larger)).font(.footnote)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(appStore.localized(.labelFontSize))
+                        .font(.headline)
+                    Slider(value: $appStore.iconLabelFontSize, in: 9...16, step: 0.5)
+                    HStack {
+                        Text("9pt").font(.footnote)
+                        Spacer()
+                        Text("16pt").font(.footnote)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(appStore.localized(.scrollSensitivity))
+                        .font(.headline)
+                    Slider(value: $appStore.scrollSensitivity, in: 0.01...0.99)
+                    HStack {
+                        Text(appStore.localized(.low)).font(.footnote)
+                        Spacer()
+                        Text(appStore.localized(.high)).font(.footnote)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(appStore.localized(.pageIndicatorOffsetLabel))
+                        .font(.headline)
+                    Slider(value: $appStore.pageIndicatorOffset, in: 0...80)
+                    HStack {
+                        Text("0").font(.footnote)
+                        Spacer()
+                        Text(String(format: "%.0f", appStore.pageIndicatorOffset)).font(.footnote)
+                        Spacer()
+                        Text("80").font(.footnote)
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Export / Import Application Support Data
@@ -330,6 +966,98 @@ struct SettingsView: View {
                     alert.runModal()
                 }
             }
+        }
+    }
+
+    // MARK: - Update Check Section
+    private var updateCheckSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(appStore.localized(.checkForUpdates))
+                        .font(.headline)
+
+                    switch appStore.updateState {
+                    case .idle:
+                        Button(action: {
+                            appStore.checkForUpdates()
+                        }) {
+                            Label(appStore.localized(.checkForUpdatesButton), systemImage: "arrow.clockwise")
+                        }
+                        .buttonStyle(.bordered)
+
+                    case .checking:
+                        HStack {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                            Text(appStore.localized(.checkingForUpdates))
+                                .foregroundStyle(.secondary)
+                        }
+
+                    case .upToDate(let latest):
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                            Text(appStore.localized(.upToDate))
+                                .foregroundStyle(.secondary)
+                        }
+
+                    case .updateAvailable(let release):
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "party.popper.fill")
+                                    .foregroundStyle(.orange)
+                                Text(appStore.localized(.updateAvailable))
+                                    .font(.subheadline.weight(.medium))
+                            }
+
+                            Text(appStore.localized(.newVersion) + " \(release.version)")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+
+                            if let notes = release.notes, !notes.isEmpty {
+                                Text(notes)
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(3)
+                            }
+
+                            Button(action: {
+                                appStore.openReleaseURL(release.url)
+                            }) {
+                                Label(appStore.localized(.downloadUpdate), systemImage: "arrow.down.circle")
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+
+                    case .failed(let error):
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(.red)
+                                Text(appStore.localized(.updateCheckFailed))
+                                    .font(.subheadline.weight(.medium))
+                            }
+
+                            Text(error)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+
+                            Button(action: {
+                                appStore.checkForUpdates()
+                            }) {
+                                Label(appStore.localized(.tryAgain), systemImage: "arrow.clockwise")
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                    }
+                }
+                Spacer()
+            }
+
+            // 自动检查更新开关
+            Toggle(appStore.localized(.autoCheckForUpdates), isOn: $appStore.autoCheckForUpdates)
+                .font(.footnote)
         }
     }
 }

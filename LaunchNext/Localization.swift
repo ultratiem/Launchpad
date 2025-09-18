@@ -33,10 +33,15 @@ enum LocalizationKey: String {
     case backgroundHint
     case classicMode
     case iconSize
+    case labelFontSize
     case smaller
     case larger
     case predictDrop
     case showLabels
+    case useLocalizedThirdPartyTitles
+    case enableAnimations
+    case animationDurationLabel
+    case viewOnGitHub
     case scrollSensitivity
     case low
     case high
@@ -54,6 +59,39 @@ enum LocalizationKey: String {
     case quit
     case languagePickerTitle
     case versionPrefix
+    case settingsSectionPerformance
+    case settingsSectionTitles
+    case settingsSectionDevelopment
+    case settingsSectionAbout
+    case settingsSectionGeneral
+    case settingsSectionAppearance
+    case developmentPlaceholderTitle
+    case developmentPlaceholderSubtitle
+    case performancePlaceholderTitle
+    case performancePlaceholderSubtitle
+    case renameSearchPlaceholder
+    case customTitlePlaceholder
+    case customTitleHint
+    case customTitleDefaultFormat
+    case customTitleReset
+    case customTitleAddButton
+    case customTitleEmptyTitle
+    case customTitleEmptySubtitle
+    case customTitleNoResults
+    case customTitlePickerMessage
+    case customTitleEdit
+    case customTitleSave
+    case customTitleCancel
+    case customTitleDelete
+    case loadingApplications
+    case showFPSOverlay
+    case showFPSOverlayDisclaimer
+    case customIconTitle
+    case customIconChoose
+    case customIconReset
+    case customIconHint
+    case customIconError
+    case pageIndicatorOffsetLabel
     case languageNameSystem
     case languageNameEnglish
     case languageNameChinese
@@ -71,6 +109,19 @@ enum LocalizationKey: String {
     case importSuccessfulTitle
     case importFailedTitle
     case okButton
+
+    // 更新检查相关
+    case checkForUpdates
+    case checkForUpdatesButton
+    case checkingForUpdates
+    case upToDate
+    case updateAvailable
+    case newVersion
+    case downloadUpdate
+    case updateCheckFailed
+    case tryAgain
+    case autoCheckForUpdates
+    case versionParseError
 }
 
 final class LocalizationManager {
@@ -79,19 +130,46 @@ final class LocalizationManager {
     private let translations: [AppLanguage: [LocalizationKey: String]]
 
     private init() {
-        translations = [
+        var builder: [AppLanguage: [LocalizationKey: String]] = [
             .english: [
                 .noAppsFound: "No apps found",
                 .searchPlaceholder: "Search",
+                .renameSearchPlaceholder: "Search apps",
+                .customTitlePlaceholder: "Enter a custom name",
+                .customTitleHint: "Rename apps here. Custom titles persist across imports and localization changes.",
+                .customTitleDefaultFormat: "Default: %@",
+                .customTitleReset: "Restore default",
+                .customTitleAddButton: "Add application",
+                .customTitleEmptyTitle: "No custom titles yet",
+                .customTitleEmptySubtitle: "Choose an app to start renaming. Custom titles stay even after imports or localization changes.",
+                .customTitleNoResults: "No matches",
+                .customTitlePickerMessage: "Select an application to manage its title.",
+                .customTitleEdit: "Edit",
+                .customTitleSave: "Save",
+                .customTitleCancel: "Cancel",
+                .customTitleDelete: "Remove",
+                .loadingApplications: "Loading applications…",
+                .showFPSOverlay: "Show FPS overlay",
+                .showFPSOverlayDisclaimer: "Approximate measurement; may not reflect actual frame pacing.",
+                .customIconTitle: "Application icon",
+                .customIconChoose: "Choose…",
+                .customIconReset: "Restore default",
+                .customIconHint: "PNG/ICNS files at 512×512 work best. Changes apply instantly.",
+                .customIconError: "Could not load the selected image.",
+                .pageIndicatorOffsetLabel: "Page indicator spacing",
                 .appTitle: "LaunchNext",
                 .modifiedFrom: "Modified from LaunchNow version 1.3.1",
                 .backgroundHint: "Automatically run on background: add LaunchNext to dock or use keyboard shortcuts to open the application window",
                 .classicMode: "Classic Launchpad (Fullscreen)",
                 .iconSize: "Icon size",
+                .labelFontSize: "Label font size",
                 .smaller: "Smaller",
                 .larger: "Larger",
                 .predictDrop: "Predict drop position",
                 .showLabels: "Show labels under icons",
+                .useLocalizedThirdPartyTitles: "Use localized app names",
+                .enableAnimations: "Enable slide animation",
+                .animationDurationLabel: "Slide animation duration",
                 .scrollSensitivity: "Scrolling sensitivity",
                 .low: "Low",
                 .high: "High",
@@ -118,6 +196,7 @@ final class LocalizationManager {
                 .languageNameGerman: "德语",
                 .languageNameRussian: "俄语",
                 .folderNamePlaceholder: "Folder Name",
+                .viewOnGitHub: "Open project link",
                 .chooseButton: "Choose",
                 .exportPanelMessage: "Choose a destination folder to export LaunchNext data",
                 .importPrompt: "Import",
@@ -125,20 +204,60 @@ final class LocalizationManager {
                 .legacyArchivePanelMessage: "Choose a legacy Launchpad archive (.lmy/.zip) or a db file",
                 .importSuccessfulTitle: "Import Successful",
                 .importFailedTitle: "Import Failed",
-                .okButton: "OK"
+                .okButton: "OK",
+
+                // 更新检查相关
+                .checkForUpdates: "Check for Updates",
+                .checkForUpdatesButton: "Check for Updates",
+                .checkingForUpdates: "Checking for updates...",
+                .upToDate: "You're up to date",
+                .updateAvailable: "Update Available",
+                .newVersion: "New version:",
+                .downloadUpdate: "Download Update",
+                .updateCheckFailed: "Update check failed",
+                .tryAgain: "Try Again",
+                .autoCheckForUpdates: "Check for updates automatically",
+                .versionParseError: "Version parsing error"
             ],
             .simplifiedChinese: [
                 .noAppsFound: "未找到任何应用",
                 .searchPlaceholder: "搜索",
+                .renameSearchPlaceholder: "搜索应用",
+                .customTitlePlaceholder: "输入自定义名称",
+                .customTitleHint: "在这里为任意应用重命名；即使重新导入或切换本地化也会保留。",
+                .customTitleDefaultFormat: "默认：%@",
+                .customTitleReset: "恢复默认",
+                .customTitleAddButton: "添加应用",
+                .customTitleEmptyTitle: "当前没有自定义名称",
+                .customTitleEmptySubtitle: "点击按钮选择应用即可开始重命名；重新导入或切换语言都会保留这些设置。",
+                .customTitleNoResults: "没有匹配项",
+                .customTitlePickerMessage: "选择一个应用来管理显示名称。",
+                .customTitleEdit: "编辑",
+                .customTitleSave: "保存",
+                .customTitleCancel: "取消",
+                .customTitleDelete: "删除",
+                .loadingApplications: "正在加载应用…",
+                .showFPSOverlay: "显示 FPS",
+                .showFPSOverlayDisclaimer: "当前数值仅供参考，可能与实际帧率存在差异。",
+                .customIconTitle: "应用图标",
+                .customIconChoose: "选择…",
+                .customIconReset: "恢复默认图标",
+                .customIconHint: "建议使用 512×512 的 PNG/ICNS 文件，修改会立即生效。",
+                .customIconError: "无法加载所选图像。",
+                .pageIndicatorOffsetLabel: "页面指示器间距",
                 .appTitle: "LaunchNext",
                 .modifiedFrom: "基于 LaunchNow 1.3.1 修改",
                 .backgroundHint: "保持后台运行：可将 LaunchNext 固定在 Dock 或使用快捷键打开窗口",
                 .classicMode: "经典 Launchpad（全屏）",
                 .iconSize: "图标大小",
+                .labelFontSize: "标签字体大小",
                 .smaller: "更小",
                 .larger: "更大",
                 .predictDrop: "启用落点预判",
                 .showLabels: "显示图标文字",
+                .useLocalizedThirdPartyTitles: "使用本地化应用名称",
+                .enableAnimations: "启用滑动动画",
+                .animationDurationLabel: "滑动动画时长",
                 .scrollSensitivity: "滚动灵敏度",
                 .low: "低",
                 .high: "高",
@@ -165,6 +284,7 @@ final class LocalizationManager {
                 .languageNameGerman: "ドイツ語",
                 .languageNameRussian: "ロシア語",
                 .folderNamePlaceholder: "文件夹名称",
+                .viewOnGitHub: "打开项目链接",
                 .chooseButton: "选择",
                 .exportPanelMessage: "选择一个目标文件夹导出 LaunchNext 数据",
                 .importPrompt: "导入",
@@ -172,20 +292,60 @@ final class LocalizationManager {
                 .legacyArchivePanelMessage: "请选择 Legacy Launchpad 归档（.lmy/.zip）或 db 文件",
                 .importSuccessfulTitle: "导入成功",
                 .importFailedTitle: "导入失败",
-                .okButton: "确定"
+                .okButton: "确定",
+
+                // 更新检查相关
+                .checkForUpdates: "检查更新",
+                .checkForUpdatesButton: "检查更新",
+                .checkingForUpdates: "正在检查更新...",
+                .upToDate: "已是最新版本",
+                .updateAvailable: "发现新版本",
+                .newVersion: "新版本：",
+                .downloadUpdate: "下载更新",
+                .updateCheckFailed: "更新检查失败",
+                .tryAgain: "重试",
+                .autoCheckForUpdates: "自动检查更新",
+                .versionParseError: "版本解析错误"
             ],
             .japanese: [
                 .noAppsFound: "アプリが見つかりません",
                 .searchPlaceholder: "検索",
+                .renameSearchPlaceholder: "アプリを検索",
+                .customTitlePlaceholder: "カスタム名を入力",
+                .customTitleHint: "ここでアプリ名を自由に変更できます。再インポートやローカライズ設定を切り替えても保持されます。",
+                .customTitleDefaultFormat: "デフォルト: %@",
+                .customTitleReset: "デフォルトに戻す",
+                .customTitleAddButton: "アプリを追加",
+                .customTitleEmptyTitle: "カスタム名はまだありません",
+                .customTitleEmptySubtitle: "ボタンを押してアプリを選べばリネームを始められます。再インポートや言語変更後も保持されます。",
+                .customTitleNoResults: "一致する項目がありません",
+                .customTitlePickerMessage: "表示名を管理したいアプリを選択してください。",
+                .customTitleEdit: "編集",
+                .customTitleSave: "保存",
+                .customTitleCancel: "キャンセル",
+                .customTitleDelete: "削除",
+                .loadingApplications: "アプリを読み込み中…",
+                .showFPSOverlay: "FPS オーバーレイを表示",
+                .showFPSOverlayDisclaimer: "簡易的な計測値であり、実際のフレームタイミングとは異なる場合があります。",
+                .customIconTitle: "アプリのアイコン",
+                .customIconChoose: "選択…",
+                .customIconReset: "デフォルトに戻す",
+                .customIconHint: "512×512 の PNG/ICNS ファイルが推奨です。変更はすぐに反映されます。",
+                .customIconError: "選択した画像を読み込めませんでした。",
+                .pageIndicatorOffsetLabel: "ページインジケーターの距離",
                 .appTitle: "LaunchNext",
                 .modifiedFrom: "LaunchNow 1.3.1 をベースに改良",
                 .backgroundHint: "バックグラウンドで実行するには、LaunchNext を Dock に追加するかショートカットで開いてください",
                 .classicMode: "クラシック Launchpad（フルスクリーン）",
                 .iconSize: "アイコンサイズ",
+                .labelFontSize: "ラベルの文字サイズ",
                 .smaller: "小さく",
                 .larger: "大きく",
                 .predictDrop: "ドロップ位置を予測",
                 .showLabels: "アイコン名を表示",
+                .useLocalizedThirdPartyTitles: "アプリ名をローカライズ",
+                .enableAnimations: "スライドアニメーションを有効化",
+                .animationDurationLabel: "スライドアニメーション時間",
                 .scrollSensitivity: "スクロール感度",
                 .low: "低",
                 .high: "高",
@@ -212,6 +372,7 @@ final class LocalizationManager {
                 .languageNameGerman: "Allemand",
                 .languageNameRussian: "Russe",
                 .folderNamePlaceholder: "フォルダ名",
+                .viewOnGitHub: "プロジェクトリンクを開く",
                 .chooseButton: "選択",
                 .exportPanelMessage: "LaunchNext のデータを書き出す保存先フォルダを選択してください",
                 .importPrompt: "インポート",
@@ -219,20 +380,60 @@ final class LocalizationManager {
                 .legacyArchivePanelMessage: "Legacy Launchpad アーカイブ（.lmy/.zip）または db ファイルを選択してください",
                 .importSuccessfulTitle: "インポート成功",
                 .importFailedTitle: "インポート失敗",
-                .okButton: "OK"
+                .okButton: "OK",
+
+                // 更新検査関連
+                .checkForUpdates: "アップデートを確認",
+                .checkForUpdatesButton: "アップデートを確認",
+                .checkingForUpdates: "アップデートを確認中...",
+                .upToDate: "最新版です",
+                .updateAvailable: "アップデートが利用可能",
+                .newVersion: "新しいバージョン：",
+                .downloadUpdate: "アップデートをダウンロード",
+                .updateCheckFailed: "アップデート確認に失敗",
+                .tryAgain: "再試行",
+                .autoCheckForUpdates: "自動でアップデートを確認",
+                .versionParseError: "バージョン解析エラー"
             ],
             .french: [
                 .noAppsFound: "Aucune app trouvée",
                 .searchPlaceholder: "Recherche",
+                .renameSearchPlaceholder: "Rechercher une app",
+                .customTitlePlaceholder: "Saisir un nom personnalisé",
+                .customTitleHint: "Renommez vos apps ici. Les noms personnalisés restent même après réimportation ou changement de langue.",
+                .customTitleDefaultFormat: "Nom par défaut : %@",
+                .customTitleReset: "Revenir au nom par défaut",
+                .customTitleAddButton: "Ajouter une app",
+                .customTitleEmptyTitle: "Aucun nom personnalisé",
+                .customTitleEmptySubtitle: "Sélectionnez une app pour commencer à la renommer. Les noms personnalisés restent après réimport ou changement de langue.",
+                .customTitleNoResults: "Aucun résultat",
+                .customTitlePickerMessage: "Choisissez l’application dont vous souhaitez gérer le nom.",
+                .customTitleEdit: "Modifier",
+                .customTitleSave: "Enregistrer",
+                .customTitleCancel: "Annuler",
+                .customTitleDelete: "Supprimer",
+                .loadingApplications: "Chargement des apps…",
+                .showFPSOverlay: "Afficher l’overlay FPS",
+                .showFPSOverlayDisclaimer: "Valeur indicative : peut ne pas refléter précisément le rafraîchissement réel.",
+                .customIconTitle: "Icône de l’application",
+                .customIconChoose: "Choisir…",
+                .customIconReset: "Réinitialiser l’icône",
+                .customIconHint: "Utilisez de préférence un fichier PNG/ICNS 512×512. Les changements sont appliqués immédiatement.",
+                .customIconError: "Impossible de charger l’image sélectionnée.",
+                .pageIndicatorOffsetLabel: "Espacement des points de page",
                 .appTitle: "LaunchNext",
                 .modifiedFrom: "Modifié à partir de LaunchNow 1.3.1",
                 .backgroundHint: "Pour l’exécuter en arrière-plan, épinglez LaunchNext au Dock ou utilisez un raccourci clavier pour ouvrir la fenêtre",
                 .classicMode: "Launchpad classique (plein écran)",
                 .iconSize: "Taille des icônes",
+                .labelFontSize: "Taille de la police des étiquettes",
                 .smaller: "Plus petit",
                 .larger: "Plus grand",
                 .predictDrop: "Prédire la position de dépôt",
                 .showLabels: "Afficher les étiquettes des icônes",
+                .useLocalizedThirdPartyTitles: "Utiliser les noms d’application localisés",
+                .enableAnimations: "Activer l’animation de glissement",
+                .animationDurationLabel: "Durée de l’animation de glissement",
                 .scrollSensitivity: "Sensibilité de défilement",
                 .low: "Faible",
                 .high: "Élevée",
@@ -259,6 +460,7 @@ final class LocalizationManager {
                 .languageNameGerman: "Alemán",
                 .languageNameRussian: "Ruso",
                 .folderNamePlaceholder: "Nom du dossier",
+                .viewOnGitHub: "Ouvrir le lien du projet",
                 .chooseButton: "Choisir",
                 .exportPanelMessage: "Choisissez un dossier de destination pour exporter les données LaunchNext",
                 .importPrompt: "Importer",
@@ -266,20 +468,60 @@ final class LocalizationManager {
                 .legacyArchivePanelMessage: "Sélectionnez une archive Launchpad Legacy (.lmy/.zip) ou un fichier db",
                 .importSuccessfulTitle: "Import réussi",
                 .importFailedTitle: "Import échoué",
-                .okButton: "OK"
+                .okButton: "OK",
+
+                // Vérification des mises à jour
+                .checkForUpdates: "Vérifier les mises à jour",
+                .checkForUpdatesButton: "Vérifier les mises à jour",
+                .checkingForUpdates: "Vérification en cours...",
+                .upToDate: "Vous êtes à jour",
+                .updateAvailable: "Mise à jour disponible",
+                .newVersion: "Nouvelle version :",
+                .downloadUpdate: "Télécharger la mise à jour",
+                .updateCheckFailed: "Échec de la vérification",
+                .tryAgain: "Réessayer",
+                .autoCheckForUpdates: "Vérifier automatiquement",
+                .versionParseError: "Erreur d'analyse de version"
             ],
             .spanish: [
                 .noAppsFound: "No se encontraron apps",
                 .searchPlaceholder: "Buscar",
+                .renameSearchPlaceholder: "Buscar app",
+                .customTitlePlaceholder: "Escribe un nombre personalizado",
+                .customTitleHint: "Renombra cualquier app aquí. Los nombres personalizados se conservan tras volver a importar o cambiar la localización.",
+                .customTitleDefaultFormat: "Predeterminado: %@",
+                .customTitleReset: "Restaurar predeterminado",
+                .customTitleAddButton: "Agregar aplicación",
+                .customTitleEmptyTitle: "Aún no hay nombres personalizados",
+                .customTitleEmptySubtitle: "Elige una app para empezar a renombrarla. Los nombres personalizados se conservan aunque reimportes o cambies de idioma.",
+                .customTitleNoResults: "Sin coincidencias",
+                .customTitlePickerMessage: "Selecciona la aplicación cuyo título quieres gestionar.",
+                .customTitleEdit: "Editar",
+                .customTitleSave: "Guardar",
+                .customTitleCancel: "Cancelar",
+                .customTitleDelete: "Eliminar",
+                .loadingApplications: "Cargando aplicaciones…",
+                .showFPSOverlay: "Mostrar overlay de FPS",
+                .showFPSOverlayDisclaimer: "Medición aproximada; puede no coincidir con la cadencia real de cuadros.",
+                .customIconTitle: "Icono de la aplicación",
+                .customIconChoose: "Elegir…",
+                .customIconReset: "Restaurar icono predeterminado",
+                .customIconHint: "Se recomienda un archivo PNG/ICNS de 512×512. Los cambios se aplican al instante.",
+                .customIconError: "No se pudo cargar la imagen seleccionada.",
+                .pageIndicatorOffsetLabel: "Separación del indicador de página",
                 .appTitle: "LaunchNext",
                 .modifiedFrom: "Modificado a partir de LaunchNow versión 1.3.1",
                 .backgroundHint: "Para ejecutarlo en segundo plano, fija LaunchNext en el Dock o usa atajos de teclado para abrir la ventana",
                 .classicMode: "Launchpad clásico (pantalla completa)",
                 .iconSize: "Tamaño de iconos",
+                .labelFontSize: "Tamaño de fuente de las etiquetas",
                 .smaller: "Más pequeño",
                 .larger: "Más grande",
                 .predictDrop: "Predecir posición de caída",
                 .showLabels: "Mostrar nombres de iconos",
+                .useLocalizedThirdPartyTitles: "Usar nombres localizados",
+                .enableAnimations: "Activar la animación de deslizamiento",
+                .animationDurationLabel: "Duración de la animación de deslizamiento",
                 .scrollSensitivity: "Sensibilidad de desplazamiento",
                 .low: "Baja",
                 .high: "Alta",
@@ -306,6 +548,7 @@ final class LocalizationManager {
                 .languageNameGerman: "Deutsch",
                 .languageNameRussian: "Русский",
                 .folderNamePlaceholder: "Nombre de la carpeta",
+                .viewOnGitHub: "Abrir enlace del proyecto",
                 .chooseButton: "Elegir",
                 .exportPanelMessage: "Elige una carpeta de destino para exportar los datos de LaunchNext",
                 .importPrompt: "Importar",
@@ -313,20 +556,60 @@ final class LocalizationManager {
                 .legacyArchivePanelMessage: "Elige un archivo de Launchpad Legacy (.lmy/.zip) o un archivo db",
                 .importSuccessfulTitle: "Importación completada",
                 .importFailedTitle: "Importación fallida",
-                .okButton: "OK"
+                .okButton: "OK",
+
+                // Verificación de actualizaciones
+                .checkForUpdates: "Buscar actualizaciones",
+                .checkForUpdatesButton: "Buscar actualizaciones",
+                .checkingForUpdates: "Buscando actualizaciones...",
+                .upToDate: "Estás actualizado",
+                .updateAvailable: "Actualización disponible",
+                .newVersion: "Nueva versión:",
+                .downloadUpdate: "Descargar actualización",
+                .updateCheckFailed: "Error al buscar actualizaciones",
+                .tryAgain: "Intentar de nuevo",
+                .autoCheckForUpdates: "Buscar actualizaciones automáticamente",
+                .versionParseError: "Error de análisis de versión"
             ],
             .german: [
                 .noAppsFound: "Keine Apps gefunden",
                 .searchPlaceholder: "Suchen",
+                .renameSearchPlaceholder: "Apps durchsuchen",
+                .customTitlePlaceholder: "Eigenen Namen eingeben",
+                .customTitleHint: "Hier kannst du jeder App einen eigenen Namen geben. Bleibt auch nach erneutem Import oder Sprachwechsel erhalten.",
+                .customTitleDefaultFormat: "Standard: %@",
+                .customTitleReset: "Standard wiederherstellen",
+                .customTitleAddButton: "App hinzufügen",
+                .customTitleEmptyTitle: "Noch keine eigenen Namen",
+                .customTitleEmptySubtitle: "Wähle eine App aus, um sie umzubenennen. Eigene Namen bleiben auch nach erneutem Import oder Sprachwechsel erhalten.",
+                .customTitleNoResults: "Keine Treffer",
+                .customTitlePickerMessage: "Wähle die App, deren Namen du verwalten möchtest.",
+                .customTitleEdit: "Bearbeiten",
+                .customTitleSave: "Speichern",
+                .customTitleCancel: "Abbrechen",
+                .customTitleDelete: "Entfernen",
+                .loadingApplications: "Apps werden geladen…",
+                .showFPSOverlay: "FPS-Overlay anzeigen",
+                .showFPSOverlayDisclaimer: "Nur ein Näherungswert, kann vom tatsächlichen Frame-Pacing abweichen.",
+                .customIconTitle: "App-Symbol",
+                .customIconChoose: "Auswählen…",
+                .customIconReset: "Standard-Symbol wiederherstellen",
+                .customIconHint: "Empfohlen sind PNG/ICNS-Dateien mit 512×512 Pixel. Änderungen wirken sofort.",
+                .customIconError: "Das ausgewählte Bild konnte nicht geladen werden.",
+                .pageIndicatorOffsetLabel: "Abstand der Seitenanzeige",
                 .appTitle: "LaunchNext",
                 .modifiedFrom: "Basierend auf LaunchNow Version 1.3.1",
                 .backgroundHint: "Für den Hintergrundbetrieb LaunchNext im Dock behalten oder mit Tastenkürzeln das Fenster öffnen",
                 .classicMode: "Klassischer Launchpad (Vollbild)",
                 .iconSize: "Symbolgröße",
+                .labelFontSize: "Schriftgröße der Beschriftung",
                 .smaller: "Kleiner",
                 .larger: "Größer",
                 .predictDrop: "Ablageposition vorhersagen",
                 .showLabels: "Beschriftungen unter Symbolen anzeigen",
+                .useLocalizedThirdPartyTitles: "Lokalisierte App-Namen verwenden",
+                .enableAnimations: "Slide-Animation aktivieren",
+                .animationDurationLabel: "Dauer der Slide-Animation",
                 .scrollSensitivity: "Scroll-Empfindlichkeit",
                 .low: "Niedrig",
                 .high: "Hoch",
@@ -353,6 +636,7 @@ final class LocalizationManager {
                 .languageNameGerman: "Deutsch",
                 .languageNameRussian: "Russisch",
                 .folderNamePlaceholder: "Ordnername",
+                .viewOnGitHub: "Projektlink öffnen",
                 .chooseButton: "Auswählen",
                 .exportPanelMessage: "Wählen Sie einen Zielordner, um die LaunchNext-Daten zu exportieren",
                 .importPrompt: "Importieren",
@@ -360,20 +644,60 @@ final class LocalizationManager {
                 .legacyArchivePanelMessage: "Wählen Sie ein Legacy-Launchpad-Archiv (.lmy/.zip) oder eine DB-Datei",
                 .importSuccessfulTitle: "Import erfolgreich",
                 .importFailedTitle: "Import fehlgeschlagen",
-                .okButton: "OK"
+                .okButton: "OK",
+
+                // Update-Überprüfung
+                .checkForUpdates: "Nach Updates suchen",
+                .checkForUpdatesButton: "Nach Updates suchen",
+                .checkingForUpdates: "Suche nach Updates...",
+                .upToDate: "Sie sind auf dem neuesten Stand",
+                .updateAvailable: "Update verfügbar",
+                .newVersion: "Neue Version:",
+                .downloadUpdate: "Update herunterladen",
+                .updateCheckFailed: "Update-Prüfung fehlgeschlagen",
+                .tryAgain: "Erneut versuchen",
+                .autoCheckForUpdates: "Automatisch nach Updates suchen",
+                .versionParseError: "Versions-Parsing-Fehler"
             ],
             .russian: [
                 .noAppsFound: "Приложения не найдены",
                 .searchPlaceholder: "Поиск",
+                .renameSearchPlaceholder: "Поиск приложений",
+                .customTitlePlaceholder: "Введите своё название",
+                .customTitleHint: "Переименовывайте приложения здесь. Пользовательские названия сохраняются даже после повторного импорта или смены локализации.",
+                .customTitleDefaultFormat: "По умолчанию: %@",
+                .customTitleReset: "Сбросить название",
+                .customTitleAddButton: "Добавить приложение",
+                .customTitleEmptyTitle: "Пользовательских названий пока нет",
+                .customTitleEmptySubtitle: "Выберите приложение, чтобы начать переименование. Названия сохранятся после повторного импорта или смены языка.",
+                .customTitleNoResults: "Совпадений нет",
+                .customTitlePickerMessage: "Выберите приложение, название которого хотите настроить.",
+                .customTitleEdit: "Редактировать",
+                .customTitleSave: "Сохранить",
+                .customTitleCancel: "Отмена",
+                .customTitleDelete: "Удалить",
+                .loadingApplications: "Загрузка приложений…",
+                .showFPSOverlay: "Показывать FPS",
+                .showFPSOverlayDisclaimer: "Показатель приблизительный и может отличаться от фактической частоты кадров.",
+                .customIconTitle: "Значок приложения",
+                .customIconChoose: "Выбрать…",
+                .customIconReset: "Вернуть стандартный значок",
+                .customIconHint: "Рекомендуется PNG/ICNS 512×512. Изменения применяются сразу.",
+                .customIconError: "Не удалось загрузить выбранное изображение.",
+                .pageIndicatorOffsetLabel: "Отступ индикатора страниц",
                 .appTitle: "LaunchNext",
                 .modifiedFrom: "Основано на LaunchNow версии 1.3.1",
                 .backgroundHint: "Чтобы работать в фоне, закрепите LaunchNext в Dock или откройте окно сочетанием клавиш",
                 .classicMode: "Классический Launchpad (на весь экран)",
                 .iconSize: "Размер значков",
+                .labelFontSize: "Размер шрифта подписи",
                 .smaller: "Меньше",
                 .larger: "Больше",
                 .predictDrop: "Предсказывать позицию размещения",
                 .showLabels: "Показывать подписи под значками",
+                .useLocalizedThirdPartyTitles: "Использовать локализованные названия",
+                .enableAnimations: "Включить анимацию перелистывания",
+                .animationDurationLabel: "Длительность анимации перелистывания",
                 .scrollSensitivity: "Чувствительность прокрутки",
                 .low: "Низкая",
                 .high: "Высокая",
@@ -400,6 +724,7 @@ final class LocalizationManager {
                 .languageNameGerman: "Немецкий",
                 .languageNameRussian: "Русский",
                 .folderNamePlaceholder: "Название папки",
+                .viewOnGitHub: "Открыть ссылку проекта",
                 .chooseButton: "Выбрать",
                 .exportPanelMessage: "Выберите папку назначения для экспорта данных LaunchNext",
                 .importPrompt: "Импортировать",
@@ -407,9 +732,115 @@ final class LocalizationManager {
                 .legacyArchivePanelMessage: "Выберите архив Legacy Launchpad (.lmy/.zip) или файл db",
                 .importSuccessfulTitle: "Импорт завершён",
                 .importFailedTitle: "Импорт не выполнен",
-                .okButton: "OK"
+                .okButton: "OK",
+
+                // Проверка обновлений
+                .checkForUpdates: "Проверить обновления",
+                .checkForUpdatesButton: "Проверить обновления",
+                .checkingForUpdates: "Проверка обновлений...",
+                .upToDate: "У вас последняя версия",
+                .updateAvailable: "Доступно обновление",
+                .newVersion: "Новая версия:",
+                .downloadUpdate: "Скачать обновление",
+                .updateCheckFailed: "Ошибка проверки обновлений",
+                .tryAgain: "Попробовать снова",
+                .autoCheckForUpdates: "Автоматически проверять обновления",
+                .versionParseError: "Ошибка разбора версии"
             ]
         ]
+
+        builder[.english]?.merge([
+            .settingsSectionGeneral: "General",
+            .settingsSectionAppearance: "Appearance",
+            .settingsSectionTitles: "App titles",
+            .settingsSectionPerformance: "Performance",
+            .settingsSectionDevelopment: "Development",
+            .settingsSectionAbout: "About",
+            .developmentPlaceholderTitle: "Development playground",
+            .developmentPlaceholderSubtitle: "Reserved for future tools and experimental features.",
+            .performancePlaceholderTitle: "Performance dashboard",
+            .performancePlaceholderSubtitle: "Monitoring metrics will appear here soon."
+        ]) { _, new in new }
+
+        builder[.simplifiedChinese]?.merge([
+            .settingsSectionGeneral: "通用",
+            .settingsSectionAppearance: "外观与行为",
+            .settingsSectionTitles: "应用名称",
+            .settingsSectionPerformance: "性能",
+            .settingsSectionDevelopment: "开发",
+            .settingsSectionAbout: "关于",
+            .developmentPlaceholderTitle: "开发功能预留",
+            .developmentPlaceholderSubtitle: "未来将用于调试工具或实验功能。",
+            .performancePlaceholderTitle: "性能面板",
+            .performancePlaceholderSubtitle: "性能指标将很快展示在此。"
+        ]) { _, new in new }
+
+        builder[.japanese]?.merge([
+            .settingsSectionGeneral: "一般",
+            .settingsSectionAppearance: "外観と動作",
+            .settingsSectionTitles: "アプリ名",
+            .settingsSectionPerformance: "パフォーマンス",
+            .settingsSectionDevelopment: "開発",
+            .settingsSectionAbout: "情報",
+            .developmentPlaceholderTitle: "開発者プレイグラウンド",
+            .developmentPlaceholderSubtitle: "将来的なツールや実験機能のためのスペースです。",
+            .performancePlaceholderTitle: "パフォーマンスダッシュボード",
+            .performancePlaceholderSubtitle: "ここに指標が表示されます。"
+        ]) { _, new in new }
+
+        builder[.french]?.merge([
+            .settingsSectionGeneral: "Général",
+            .settingsSectionAppearance: "Apparence et comportement",
+            .settingsSectionTitles: "Noms d’app",
+            .settingsSectionPerformance: "Performances",
+            .settingsSectionDevelopment: "Développement",
+            .settingsSectionAbout: "À propos",
+            .developmentPlaceholderTitle: "Espace développeur",
+            .developmentPlaceholderSubtitle: "Réservé aux outils et fonctionnalités expérimentales à venir.",
+            .performancePlaceholderTitle: "Tableau de bord des performances",
+            .performancePlaceholderSubtitle: "Les indicateurs apparaîtront ici prochainement."
+        ]) { _, new in new }
+
+        builder[.spanish]?.merge([
+            .settingsSectionGeneral: "General",
+            .settingsSectionAppearance: "Apariencia y comportamiento",
+            .settingsSectionTitles: "Nombres de apps",
+            .settingsSectionPerformance: "Rendimiento",
+            .settingsSectionDevelopment: "Desarrollo",
+            .settingsSectionAbout: "Acerca de",
+            .developmentPlaceholderTitle: "Zona de desarrollo",
+            .developmentPlaceholderSubtitle: "Reservado para futuras herramientas y funciones experimentales.",
+            .performancePlaceholderTitle: "Panel de rendimiento",
+            .performancePlaceholderSubtitle: "Muy pronto podrás ver métricas aquí."
+        ]) { _, new in new }
+
+        builder[.german]?.merge([
+            .settingsSectionGeneral: "Allgemein",
+            .settingsSectionAppearance: "Darstellung & Verhalten",
+            .settingsSectionTitles: "App-Namen",
+            .settingsSectionPerformance: "Performance",
+            .settingsSectionDevelopment: "Entwicklung",
+            .settingsSectionAbout: "Info",
+            .developmentPlaceholderTitle: "Entwicklerbereich",
+            .developmentPlaceholderSubtitle: "Reserviert für zukünftige Tools und experimentelle Features.",
+            .performancePlaceholderTitle: "Performance-Dashboard",
+            .performancePlaceholderSubtitle: "Kennzahlen folgen in Kürze."
+        ]) { _, new in new }
+
+        builder[.russian]?.merge([
+            .settingsSectionGeneral: "Общие",
+            .settingsSectionAppearance: "Внешний вид и поведение",
+            .settingsSectionTitles: "Названия приложений",
+            .settingsSectionPerformance: "Производительность",
+            .settingsSectionDevelopment: "Разработка",
+            .settingsSectionAbout: "О приложении",
+            .developmentPlaceholderTitle: "Площадка для разработчиков",
+            .developmentPlaceholderSubtitle: "Здесь появятся инструменты и экспериментальные возможности.",
+            .performancePlaceholderTitle: "Панель производительности",
+            .performancePlaceholderSubtitle: "Скоро здесь появятся показатели эффективности."
+        ]) { _, new in new }
+
+        translations = builder
     }
 
     func localized(_ key: LocalizationKey, language: AppLanguage) -> String {

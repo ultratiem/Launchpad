@@ -1,6 +1,7 @@
 import SwiftUI
 import Combine
 import AppKit
+import CoreVideo
 
 // MARK: - LaunchpadItem extension
 extension LaunchpadItem {
@@ -28,6 +29,51 @@ private class PageFlipManager: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + autoFlipInterval) {
             self.isCooldown = false
         }
+    }
+}
+
+private final class FPSMonitor {
+    private var displayLink: CVDisplayLink?
+    private var lastTimestamp: Double = 0
+    private let callback: (Double, Double) -> Void
+
+    init?(callback: @escaping (Double, Double) -> Void) {
+        self.callback = callback
+        var link: CVDisplayLink?
+        guard CVDisplayLinkCreateWithActiveCGDisplays(&link) == kCVReturnSuccess, let link else { return nil }
+        displayLink = link
+        let userInfo = UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
+        CVDisplayLinkSetOutputCallback(link, { _, inNow, _, _, _, userInfo in
+            guard let userInfo else { return kCVReturnSuccess }
+            let monitor = Unmanaged<FPSMonitor>.fromOpaque(userInfo).takeUnretainedValue()
+            monitor.step(timestamp: inNow.pointee)
+            return kCVReturnSuccess
+        }, userInfo)
+        CVDisplayLinkStart(link)
+    }
+
+    private func step(timestamp: CVTimeStamp) {
+        guard timestamp.videoTimeScale != 0 else { return }
+        let current = Double(timestamp.videoTime) / Double(timestamp.videoTimeScale)
+        guard lastTimestamp != 0 else {
+            lastTimestamp = current
+            return
+        }
+        let delta = current - lastTimestamp
+        lastTimestamp = current
+        guard delta > 0 else { return }
+        callback(1.0 / delta, delta)
+    }
+
+    func invalidate() {
+        if let link = displayLink {
+            CVDisplayLinkStop(link)
+        }
+        displayLink = nil
+    }
+
+    deinit {
+        invalidate()
     }
 }
 
@@ -73,6 +119,9 @@ struct LaunchpadView: View {
     @State private var wheelLastFlipAt: Date? = nil
     private let wheelFlipCooldown: TimeInterval = 0.15
     @State private var dragPointerOffset: CGPoint = .zero
+    @State private var fpsMonitor: FPSMonitor?
+    @State private var fpsValue: Double = 0
+    @State private var frameTimeMilliseconds: Double = 0
 
     private var isFolderOpen: Bool { appStore.openFolder != nil }
     
@@ -302,7 +351,17 @@ struct LaunchpadView: View {
                         }
                     }
 
-                    if filteredItems.isEmpty && !appStore.searchText.isEmpty {
+                    if appStore.isInitialLoading {
+                        VStack(spacing: 16) {
+                            ProgressView()
+                                .controlSize(.large)
+                                .progressViewStyle(.circular)
+                            Text(appStore.localized(.loadingApplications))
+                                .font(.headline)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if filteredItems.isEmpty && !appStore.searchText.isEmpty {
                         VStack(spacing: 20) {
                             Image(systemName: "magnifyingglass")
                                 .font(.largeTitle)
@@ -444,7 +503,7 @@ struct LaunchpadView: View {
                                 }
                         }
                     }
-                    .padding(.bottom, 27) // 向上抬高一点
+                    .padding(.bottom, CGFloat(appStore.pageIndicatorOffset))
                     .opacity(isFolderOpen ? 0.1 : 1)
                     .allowsHitTesting(!isFolderOpen)
                 }
@@ -470,6 +529,7 @@ struct LaunchpadView: View {
             ZStack {
                 // 全窗口滚动捕获层（不拦截点击，仅监听滚动）
                 ScrollEventCatcher { deltaX, deltaY, phase, isMomentum, isPrecise in
+                    guard !appStore.isSetting else { return }
                     let pageWidth = currentContainerSize.width + config.pageSpacing
                     handleScroll(deltaX: deltaX,
                                  deltaY: deltaY,
@@ -609,6 +669,19 @@ struct LaunchpadView: View {
                 }
             }
         )
+        .overlay(alignment: .bottomTrailing) {
+            if appStore.showFPSOverlay {
+                Text(String(format: "%.0f FPS  %.1f ms", fpsValue, frameTimeMilliseconds))
+                    .font(.caption.monospacedDigit()).bold()
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .padding(18)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: appStore.showFPSOverlay)
          .onChange(of: appStore.items) {
              guard draggingItem == nil else { return }
              clampSelection()
@@ -651,6 +724,9 @@ struct LaunchpadView: View {
                
                // 检查缓存状态
                checkCacheStatus()
+              if appStore.showFPSOverlay {
+                  startFPSMonitoring()
+              }
            }
          .onDisappear {
              [keyMonitor, handoffEventMonitor].forEach { monitor in
@@ -660,12 +736,21 @@ struct LaunchpadView: View {
              [windowObserver, windowHiddenObserver].forEach { observer in
                  if let observer = observer { NotificationCenter.default.removeObserver(observer) }
              }
-             keyMonitor = nil
-             handoffEventMonitor = nil
-             globalMouseUpMonitor = nil
-             windowObserver = nil
-             windowHiddenObserver = nil
+            keyMonitor = nil
+            handoffEventMonitor = nil
+            globalMouseUpMonitor = nil
+            windowObserver = nil
+            windowHiddenObserver = nil
+            stopFPSMonitoring()
          }
+        .onChange(of: appStore.showFPSOverlay) { enabled in
+            if enabled {
+                startFPSMonitoring()
+            } else {
+                stopFPSMonitoring()
+                fpsValue = 0
+            }
+        }
     }
     
     private func launchApp(_ app: AppInfo) {
@@ -769,7 +854,7 @@ struct LaunchpadView: View {
                         iconSize: currentIconSize)
     }
 
-    private func finalizeHandoffDrag() {
+private func finalizeHandoffDrag() {
         guard draggingItem != nil else { return }
         defer {
             if let monitor = handoffEventMonitor { NSEvent.removeMonitor(monitor); handoffEventMonitor = nil }
@@ -840,6 +925,30 @@ struct LaunchpadView: View {
         navigateToPage(appStore.currentPage - 1)
     }
     
+}
+
+// MARK: - FPS Monitoring
+extension LaunchpadView {
+    private func startFPSMonitoring() {
+        stopFPSMonitoring()
+        if let monitor = FPSMonitor { fps, frameDelta in
+            let clamped = max(0, min(fps, 240))
+            DispatchQueue.main.async {
+                let smoothed = fpsValue * 0.8 + clamped * 0.2
+                fpsValue = smoothed
+                frameTimeMilliseconds = frameDelta * 1000
+            }
+        } {
+            fpsMonitor = monitor
+        }
+    }
+
+    private func stopFPSMonitoring() {
+        fpsMonitor?.invalidate()
+        fpsMonitor = nil
+        fpsValue = 0
+        frameTimeMilliseconds = 0
+    }
 }
 
 // MARK: - Tap close helper
@@ -1143,6 +1252,7 @@ extension LaunchpadView {
                 labelWidth: labelWidth,
                 isSelected: isSelected,
                 showLabel: appStore.showLabels,
+                labelFontSize: CGFloat(appStore.iconLabelFontSize),
                 shouldAllowHover: shouldAllowHover,
                 externalScale: isCenterCreatingTarget ? 1.2 : nil,
                 onTap: { if draggingItem == nil { handleItemTap(item) } }

@@ -9,6 +9,7 @@ struct LaunchpadItemButton: View {
     let labelWidth: CGFloat
     let isSelected: Bool
     let showLabel: Bool
+    let labelFontSize: CGFloat
     var shouldAllowHover: Bool = true
     var externalScale: CGFloat? = nil
     let onTap: () -> Void
@@ -30,6 +31,7 @@ struct LaunchpadItemButton: View {
          labelWidth: CGFloat = 80,
          isSelected: Bool = false,
          showLabel: Bool = true,
+         labelFontSize: CGFloat = 11,
           shouldAllowHover: Bool = true,
           externalScale: CGFloat? = nil,
          onTap: @escaping () -> Void,
@@ -39,6 +41,7 @@ struct LaunchpadItemButton: View {
         self.labelWidth = labelWidth
         self.isSelected = isSelected
         self.showLabel = showLabel
+        self.labelFontSize = labelFontSize
         self.shouldAllowHover = shouldAllowHover
         self.externalScale = externalScale
         self.onTap = onTap
@@ -93,7 +96,7 @@ struct LaunchpadItemButton: View {
 
                 if showLabel {
                     Text(item.name)
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: labelFontSize, weight: .medium))
                         .lineLimit(2)
                         .multilineTextAlignment(.center)
                         .truncationMode(.tail)

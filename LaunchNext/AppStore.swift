@@ -4,11 +4,63 @@ import Combine
 import SwiftData
 import UniformTypeIdentifiers
 
+private struct GitHubRelease: Decodable {
+    let tagName: String
+    let htmlUrl: URL
+    let body: String?
+
+    enum CodingKeys: String, CodingKey {
+        case tagName = "tag_name"
+        case htmlUrl = "html_url"
+        case body
+    }
+}
+
+private struct SemanticVersion: Comparable, Equatable {
+    private let components: [Int]
+
+    init?(_ rawValue: String) {
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lower = trimmed.lowercased()
+        let withoutPrefix = lower.hasPrefix("v") ? String(trimmed.dropFirst()) : trimmed
+        let sanitized = withoutPrefix.split(separator: "-", maxSplits: 1, omittingEmptySubsequences: true).first ?? withoutPrefix[...]
+        let parts = sanitized.split(separator: ".").map { Int($0) ?? 0 }
+        guard !parts.isEmpty else { return nil }
+        components = parts
+    }
+
+    static func < (lhs: SemanticVersion, rhs: SemanticVersion) -> Bool {
+        let count = max(lhs.components.count, rhs.components.count)
+        for index in 0..<count {
+            let left = index < lhs.components.count ? lhs.components[index] : 0
+            let right = index < rhs.components.count ? rhs.components[index] : 0
+            if left != right { return left < right }
+        }
+        return false
+    }
+}
+
 final class AppStore: ObservableObject {
+    enum UpdateState: Equatable {
+        case idle
+        case checking
+        case upToDate(latest: String)
+        case updateAvailable(UpdateRelease)
+        case failed(String)
+    }
+
+    struct UpdateRelease: Equatable {
+        let version: String
+        let url: URL
+        let notes: String?
+    }
+
+    private static let customTitlesKey = "customAppTitles"
     @Published var apps: [AppInfo] = []
     @Published var folders: [FolderInfo] = []
     @Published var items: [LaunchpadItem] = []
     @Published var isSetting = false
+    @Published var isInitialLoading = true
     @Published var currentPage = 0
     @Published var searchText: String = ""
     @Published var isStartOnLogin: Bool = false
@@ -35,7 +87,7 @@ final class AppStore: ObservableObject {
         didSet { UserDefaults.standard.set(showLabels, forKey: "showLabels") }
     }
     
-    @Published var scrollSensitivity: Double = 0.15 {
+    @Published var scrollSensitivity: Double {
         didSet {
             UserDefaults.standard.set(scrollSensitivity, forKey: "scrollSensitivity")
         }
@@ -48,6 +100,75 @@ final class AppStore: ObservableObject {
         didSet { UserDefaults.standard.set(enableDropPrediction, forKey: "enableDropPrediction") }
     }
 
+    @Published var enableAnimations: Bool = {
+        if UserDefaults.standard.object(forKey: "enableAnimations") == nil { return true }
+        return UserDefaults.standard.bool(forKey: "enableAnimations")
+    }() {
+        didSet { UserDefaults.standard.set(enableAnimations, forKey: "enableAnimations") }
+    }
+
+    @Published var iconLabelFontSize: Double = {
+        let stored = UserDefaults.standard.double(forKey: "iconLabelFontSize")
+        return stored == 0 ? 11.0 : stored
+    }() {
+        didSet {
+            UserDefaults.standard.set(iconLabelFontSize, forKey: "iconLabelFontSize")
+            triggerGridRefresh()
+        }
+    }
+
+    // 更新检查相关属性
+    @Published var updateState: UpdateState = .idle
+
+    @Published var autoCheckForUpdates: Bool = {
+        if UserDefaults.standard.object(forKey: "autoCheckForUpdates") == nil { return true }
+        return UserDefaults.standard.bool(forKey: "autoCheckForUpdates")
+    }() {
+        didSet { UserDefaults.standard.set(autoCheckForUpdates, forKey: "autoCheckForUpdates") }
+    }
+
+    @Published var animationDuration: Double = {
+        let stored = UserDefaults.standard.double(forKey: "animationDuration")
+        return stored == 0 ? 0.3 : stored
+    }() {
+        didSet { UserDefaults.standard.set(animationDuration, forKey: "animationDuration") }
+    }
+
+    @Published var useLocalizedThirdPartyTitles: Bool = {
+        if UserDefaults.standard.object(forKey: "useLocalizedThirdPartyTitles") == nil { return true }
+        return UserDefaults.standard.bool(forKey: "useLocalizedThirdPartyTitles")
+    }() {
+        didSet {
+            guard oldValue != useLocalizedThirdPartyTitles else { return }
+            UserDefaults.standard.set(useLocalizedThirdPartyTitles, forKey: "useLocalizedThirdPartyTitles")
+            DispatchQueue.main.async { [weak self] in
+                self?.refresh()
+            }
+        }
+    }
+
+    @Published var showFPSOverlay: Bool = {
+        if UserDefaults.standard.object(forKey: "showFPSOverlay") == nil { return false }
+        return UserDefaults.standard.bool(forKey: "showFPSOverlay")
+    }() {
+        didSet { UserDefaults.standard.set(showFPSOverlay, forKey: "showFPSOverlay") }
+    }
+
+    @Published var pageIndicatorOffset: Double = {
+        if UserDefaults.standard.object(forKey: "pageIndicatorOffset") == nil { return 27.0 }
+        return UserDefaults.standard.double(forKey: "pageIndicatorOffset")
+    }() {
+        didSet {
+            UserDefaults.standard.set(pageIndicatorOffset, forKey: "pageIndicatorOffset")
+        }
+    }
+
+    @Published private(set) var currentAppIcon: NSImage {
+        didSet { applyCurrentAppIcon() }
+    }
+
+    @Published private(set) var hasCustomAppIcon: Bool
+
     @Published var preferredLanguage: AppLanguage = {
         if let raw = UserDefaults.standard.string(forKey: "preferredLanguage"),
            let lang = AppLanguage(rawValue: raw) {
@@ -56,6 +177,10 @@ final class AppStore: ObservableObject {
         return .system
     }() {
         didSet { UserDefaults.standard.set(preferredLanguage.rawValue, forKey: "preferredLanguage") }
+    }
+
+    @Published private(set) var customTitles: [String: String] = AppStore.loadCustomTitles() {
+        didSet { persistCustomTitles() }
     }
 
     // 缓存管理器
@@ -92,7 +217,10 @@ final class AppStore: ObservableObject {
     private var gridRefreshWorkItem: DispatchWorkItem?
     private var iconScaleWorkItem: DispatchWorkItem?
     private var rescanWorkItem: DispatchWorkItem?
+    private var customTitleRefreshWorkItem: DispatchWorkItem?
     private let fsEventsQueue = DispatchQueue(label: "app.store.fsevents")
+    private let customIconFileURL: URL
+    private let defaultAppIcon: NSImage
     
     // 计算属性
     private var itemsPerPage: Int { 35 }
@@ -113,11 +241,8 @@ final class AppStore: ObservableObject {
         } else {
             self.isFullscreenMode = UserDefaults.standard.bool(forKey: "isFullscreenMode")
         }
-        self.scrollSensitivity = UserDefaults.standard.double(forKey: "scrollSensitivity")
-        // 如果没有保存过设置，使用默认值
-        if self.scrollSensitivity == 0.0 {
-            self.scrollSensitivity = 0.15
-        }
+        let storedSensitivity = UserDefaults.standard.double(forKey: "scrollSensitivity")
+        self.scrollSensitivity = storedSensitivity == 0 ? 0.15 : storedSensitivity
         // 读取图标缩放默认值
         if let v = UserDefaults.standard.object(forKey: "iconScale") as? Double {
             self.iconScale = v
@@ -125,7 +250,73 @@ final class AppStore: ObservableObject {
         if UserDefaults.standard.object(forKey: "enableDropPrediction") == nil {
             UserDefaults.standard.set(true, forKey: "enableDropPrediction")
         }
+        if UserDefaults.standard.object(forKey: "useLocalizedThirdPartyTitles") == nil {
+            UserDefaults.standard.set(true, forKey: "useLocalizedThirdPartyTitles")
+        }
+        if UserDefaults.standard.object(forKey: "enableAnimations") == nil {
+            UserDefaults.standard.set(true, forKey: "enableAnimations")
+        }
+        if UserDefaults.standard.object(forKey: "iconLabelFontSize") == nil {
+            UserDefaults.standard.set(11.0, forKey: "iconLabelFontSize")
+        }
+        if UserDefaults.standard.object(forKey: "animationDuration") == nil {
+            UserDefaults.standard.set(0.3, forKey: "animationDuration")
+        }
+        if UserDefaults.standard.object(forKey: "showFPSOverlay") == nil {
+            UserDefaults.standard.set(false, forKey: "showFPSOverlay")
+        }
+        if UserDefaults.standard.object(forKey: "pageIndicatorOffset") == nil {
+            UserDefaults.standard.set(27.0, forKey: "pageIndicatorOffset")
+        }
+
+        let storedDuration = UserDefaults.standard.double(forKey: "animationDuration")
+        self.animationDuration = storedDuration == 0 ? 0.3 : storedDuration
+        self.enableAnimations = UserDefaults.standard.object(forKey: "enableAnimations") as? Bool ?? true
+        self.customIconFileURL = AppStore.customIconFileURL
+
+        let fallbackIcon = (NSApplication.shared.applicationIconImage?.copy() as? NSImage) ?? NSImage(size: NSSize(width: 512, height: 512))
+        self.defaultAppIcon = fallbackIcon
+        if let storedIcon = AppStore.loadStoredAppIcon(from: customIconFileURL) {
+            self.currentAppIcon = storedIcon
+            self.hasCustomAppIcon = true
+        } else {
+            self.currentAppIcon = fallbackIcon
+            self.hasCustomAppIcon = false
+        }
+        applyCurrentAppIcon()
     }
+
+    private static func loadCustomTitles() -> [String: String] {
+        guard let raw = UserDefaults.standard.dictionary(forKey: AppStore.customTitlesKey) else {
+            return [:]
+        }
+
+        var result: [String: String] = [:]
+        for (key, value) in raw {
+            guard let stringValue = value as? String else { continue }
+            let trimmed = stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty {
+                result[key] = trimmed
+            }
+        }
+        return result
+    }
+
+    private func persistCustomTitles() {
+        let sanitized = customTitles.reduce(into: [String: String]()) { partialResult, entry in
+            let trimmed = entry.value.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty {
+                partialResult[entry.key] = trimmed
+            }
+        }
+
+        if sanitized.isEmpty {
+            UserDefaults.standard.removeObject(forKey: AppStore.customTitlesKey)
+        } else {
+            UserDefaults.standard.set(sanitized, forKey: AppStore.customTitlesKey)
+        }
+    }
+
 
     // 图标缩放（相对于格子）：默认 0.95，范围建议 0.8~1.1
     @Published var iconScale: Double = 0.95 {
@@ -295,19 +486,17 @@ final class AppStore: ObservableObject {
                 }
             }
             
-            // 保持现有应用的顺序，只对新应用按名称排序
+            // 保持现有应用的顺序，只对新增应用按名称排序
             var newApps: [AppInfo] = []
             var existingAppPaths = Set<String>()
-            
-            // 首先保持现有应用的顺序
+            let refreshedMap = Dictionary(uniqueKeysWithValues: uniqueApps.map { ($0.url.path, $0) })
+
             for app in self.apps {
-                if uniqueApps.contains(where: { $0.url.path == app.url.path }) {
-                    newApps.append(app)
-                    existingAppPaths.insert(app.url.path)
-                }
+                guard let refreshed = refreshedMap[app.url.path] else { continue }
+                newApps.append(refreshed)
+                existingAppPaths.insert(app.url.path)
             }
-            
-            // 然后添加新应用，按名称排序
+
             let newAppPaths = uniqueApps.filter { !existingAppPaths.contains($0.url.path) }
             let sortedNewApps = newAppPaths.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
             newApps.append(contentsOf: sortedNewApps)
@@ -338,28 +527,40 @@ final class AppStore: ObservableObject {
         // 创建新应用列表，但保持现有顺序
         var updatedApps: [AppInfo] = []
         var newAppsToAdd: [AppInfo] = []
+        let freshMap: [String: AppInfo] = Dictionary(uniqueKeysWithValues: newApps.map { ($0.url.path, $0) })
         
-        // 第一步：保持现有应用的顺序，只更新仍然存在的应用
+        // 第一步：保持现有顺序，同时用最新扫描结果刷新应用信息
         for app in self.apps {
-            if newApps.contains(where: { $0.url.path == app.url.path }) {
-                // 应用仍然存在，保持原有位置
-                updatedApps.append(app)
+            if let refreshed = freshMap[app.url.path] {
+                updatedApps.append(refreshed)
             } else {
                 // 应用已删除，从所有相关位置移除
                 self.removeDeletedApp(app)
             }
         }
         
-        // 第二步：找出新增的应用
-        for newApp in newApps {
-            if !self.apps.contains(where: { $0.url.path == newApp.url.path }) {
-                newAppsToAdd.append(newApp)
+        // 同步更新文件夹中的应用对象，确保名称/图标及时刷新
+        for folderIndex in folders.indices {
+            let refreshedApps = folders[folderIndex].apps.compactMap { freshMap[$0.url.path] }
+            if refreshedApps.isEmpty {
+                folders[folderIndex].apps.removeAll()
+            } else if refreshedApps.count != folders[folderIndex].apps.count {
+                folders[folderIndex].apps = refreshedApps
+            } else {
+                folders[folderIndex].apps = refreshedApps
             }
         }
+        folders.removeAll { $0.apps.isEmpty }
         
+        // 第二步：找出新增的应用（顺序保持与扫描结果一致）
+        let existingPaths = Set(updatedApps.map { $0.url.path })
+        for newApp in newApps where !existingPaths.contains(newApp.url.path) {
+            newAppsToAdd.append(newApp)
+        }
+
         // 第三步：将新增应用添加到末尾，保持现有应用顺序不变
         updatedApps.append(contentsOf: newAppsToAdd)
-        
+
         // 更新应用列表
         self.apps = updatedApps
         
@@ -524,7 +725,8 @@ final class AppStore: ObservableObject {
         // 重建项目列表，严格保持现有顺序
         var newItems: [LaunchpadItem] = []
         let appsInFolders = Set(self.folders.flatMap { $0.apps })
-        
+        let refreshedAppsByPath = Dictionary(uniqueKeysWithValues: self.apps.map { ($0.url.path, $0) })
+
         // 第一步：处理现有项目，保持顺序
         for (_, item) in currentOrder.enumerated() {
             switch item {
@@ -547,8 +749,9 @@ final class AppStore: ObservableObject {
                 // 检查应用是否仍然存在
                 if self.apps.contains(where: { $0.url.path == app.url.path }) {
                     if !appsInFolders.contains(app) {
-                        // 应用仍然存在且不在文件夹中，保持原有位置
-                        newItems.append(.app(app))
+                        // 应用仍然存在且不在文件夹中，更新为最新信息
+                        let updatedApp = refreshedAppsByPath[app.url.path] ?? app
+                        newItems.append(.app(updatedApp))
                     } else {
                         // 应用现在在文件夹中，保持空槽位
                         newItems.append(.empty(UUID().uuidString))
@@ -916,8 +1119,8 @@ final class AppStore: ObservableObject {
         NSWorkspace.shared.isFilePackage(atPath: url.path)
     }
 
-    private func appInfo(from url: URL) -> AppInfo {
-        AppInfo.from(url: url)
+    private func appInfo(from url: URL, preferredName: String? = nil) -> AppInfo {
+        AppInfo.from(url: url, preferredName: preferredName, customTitle: customTitles[url.path])
     }
     
     // MARK: - 文件夹管理
@@ -1768,6 +1971,12 @@ final class AppStore: ObservableObject {
             let appPaths = apps.map { $0.url.path }
             cacheManager.preloadIcons(for: appPaths)
         }
+
+        cacheManager.smartPreloadIcons(for: items, currentPage: currentPage, itemsPerPage: itemsPerPage)
+
+        if isInitialLoading {
+            isInitialLoading = false
+        }
     }
     
     /// 手动刷新（模拟全新启动的完整流程）
@@ -1832,6 +2041,219 @@ final class AppStore: ObservableObject {
 
     func localizedLanguageName(for language: AppLanguage) -> String {
         LocalizationManager.shared.languageDisplayName(for: language, displayLanguage: resolvedLanguage)
+    }
+
+    // MARK: - Custom Titles
+
+    func customTitle(for app: AppInfo) -> String {
+        customTitles[app.url.path] ?? ""
+    }
+
+    func setCustomTitle(_ rawValue: String, for app: AppInfo) {
+        let key = app.url.path
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if trimmed.isEmpty {
+            if customTitles[key] != nil {
+                var updated = customTitles
+                updated.removeValue(forKey: key)
+                customTitles = updated
+                applyCustomTitleOverride(for: app.url, title: nil)
+            }
+            return
+        }
+
+        if customTitles[key] == trimmed { return }
+
+        var updated = customTitles
+        updated[key] = trimmed
+        customTitles = updated
+        applyCustomTitleOverride(for: app.url, title: trimmed)
+    }
+
+    func clearCustomTitle(for app: AppInfo) {
+        setCustomTitle("", for: app)
+    }
+
+    func appInfoForCustomTitle(path: String) -> AppInfo {
+        if let existing = apps.first(where: { $0.url.path == path }) {
+            return existing
+        }
+
+        let url = URL(fileURLWithPath: path)
+        if FileManager.default.fileExists(atPath: url.path) {
+            return AppInfo.from(url: url, customTitle: customTitles[path])
+        }
+
+        let fallbackName = customTitles[path] ?? url.deletingPathExtension().lastPathComponent
+        let icon = NSWorkspace.shared.icon(forFile: url.path)
+        return AppInfo(name: fallbackName, icon: icon, url: url)
+    }
+
+    func defaultDisplayName(for path: String) -> String {
+        let url = URL(fileURLWithPath: path)
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            return url.deletingPathExtension().lastPathComponent
+        }
+        return AppInfo.from(url: url, customTitle: nil).name
+    }
+
+    @discardableResult
+    func ensureCustomTitleEntry(for url: URL) -> AppInfo? {
+        let resolved = url.resolvingSymlinksInPath()
+        guard resolved.pathExtension.lowercased() == "app" else { return nil }
+        guard FileManager.default.fileExists(atPath: resolved.path) else { return nil }
+
+        let info = appInfo(from: resolved)
+        if customTitles[resolved.path] == nil {
+            setCustomTitle(info.name, for: info)
+        } else {
+            applyCustomTitleOverride(for: resolved, title: customTitles[resolved.path])
+        }
+        return info
+    }
+
+    private func applyCustomTitleOverride(for url: URL, title: String?) {
+        let info = AppInfo.from(url: url, customTitle: title)
+        var changed = false
+
+        if let index = apps.firstIndex(where: { $0.url == url }) {
+            apps[index] = info
+            changed = true
+        }
+
+        for folderIndex in folders.indices {
+            var folder = folders[folderIndex]
+            var folderChanged = false
+            for appIndex in folder.apps.indices where folder.apps[appIndex].url == url {
+                folder.apps[appIndex] = info
+                folderChanged = true
+            }
+            if folderChanged {
+                folders[folderIndex] = folder
+                changed = true
+            }
+        }
+
+        for itemIndex in items.indices {
+            switch items[itemIndex] {
+            case .app(let app) where app.url == url:
+                items[itemIndex] = .app(info)
+                changed = true
+            case .app:
+                break
+            case .folder(var folder):
+                var folderChanged = false
+                for appIndex in folder.apps.indices where folder.apps[appIndex].url == url {
+                    folder.apps[appIndex] = info
+                    folderChanged = true
+                }
+                if folderChanged {
+                    items[itemIndex] = .folder(folder)
+                    changed = true
+                }
+            case .folder:
+                break
+            case .empty:
+                break
+            }
+        }
+
+        if changed {
+            triggerFolderUpdate()
+            triggerGridRefresh()
+            scheduleCustomTitleCacheRefresh()
+        }
+    }
+
+    private func scheduleCustomTitleCacheRefresh() {
+        customTitleRefreshWorkItem?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.cacheManager.refreshCache(from: self.apps, items: self.items)
+        }
+        customTitleRefreshWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: work)
+    }
+
+    func setCustomAppIcon(from url: URL) -> Bool {
+        guard let image = NSImage(contentsOf: url),
+              let normalized = AppStore.normalizedIconImage(from: image),
+              let data = AppStore.pngData(from: normalized) else {
+            return false
+        }
+        do {
+            try data.write(to: customIconFileURL, options: .atomic)
+            currentAppIcon = normalized
+            hasCustomAppIcon = true
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    func resetCustomAppIcon() {
+        try? FileManager.default.removeItem(at: customIconFileURL)
+        currentAppIcon = defaultAppIcon
+        hasCustomAppIcon = false
+    }
+
+    private func applyCurrentAppIcon() {
+        let icon = currentAppIcon
+        DispatchQueue.main.async {
+            NSApplication.shared.applicationIconImage = icon
+        }
+    }
+
+    private static func loadStoredAppIcon(from url: URL) -> NSImage? {
+        guard FileManager.default.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url),
+              let image = NSImage(data: data) else { return nil }
+        return image
+    }
+
+    private static func normalizedIconImage(from image: NSImage, size: CGFloat = 512) -> NSImage? {
+        let targetSize = NSSize(width: size, height: size)
+        guard image.size.width > 0, image.size.height > 0 else { return nil }
+        let scale = min(targetSize.width / image.size.width, targetSize.height / image.size.height)
+        let scaledSize = NSSize(width: image.size.width * scale, height: image.size.height * scale)
+        let drawRect = NSRect(x: (targetSize.width - scaledSize.width) / 2,
+                              y: (targetSize.height - scaledSize.height) / 2,
+                              width: scaledSize.width,
+                              height: scaledSize.height)
+
+        let output = NSImage(size: targetSize)
+        output.lockFocus()
+        NSColor.clear.setFill()
+        NSBezierPath(rect: NSRect(origin: .zero, size: targetSize)).fill()
+        let sourceRect = NSRect(origin: .zero, size: image.size)
+        let hints: [NSImageRep.HintKey: Any] = [.interpolation: NSImageInterpolation.high.rawValue]
+        image.draw(in: drawRect, from: sourceRect, operation: .sourceOver, fraction: 1.0, respectFlipped: false, hints: hints)
+        output.unlockFocus()
+        return output
+    }
+
+    private static func pngData(from image: NSImage) -> Data? {
+        guard let tiff = image.tiffRepresentation,
+              let rep = NSBitmapImageRep(data: tiff) else { return nil }
+        rep.size = image.size
+        return rep.representation(using: .png, properties: [:])
+    }
+
+    private static func ensureAppSupportDirectory() -> URL {
+        let fm = FileManager.default
+        if let base = try? fm.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true) {
+            let dir = base.appendingPathComponent("LaunchNext", isDirectory: true)
+            if !fm.fileExists(atPath: dir.path) {
+                try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
+            }
+            return dir
+        }
+        return URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+    }
+
+    private static var customIconFileURL: URL {
+        ensureAppSupportDirectory().appendingPathComponent("CustomAppIcon.png", isDirectory: false)
     }
 
     /// 文件夹操作后刷新缓存，确保搜索功能正常工作
@@ -2113,5 +2535,62 @@ final class AppStore: ObservableObject {
         } catch {
             return (false, "JSON解析失败: \(error.localizedDescription)")
         }
+    }
+
+    // MARK: - 更新检查功能
+
+    func checkForUpdates() {
+        guard updateState != .checking else { return }
+
+        updateState = .checking
+
+        Task {
+            do {
+                let currentVersion = getCurrentVersion()
+                let latestRelease = try await fetchLatestRelease()
+
+                await MainActor.run {
+                    if let current = SemanticVersion(currentVersion),
+                       let latest = SemanticVersion(latestRelease.tagName) {
+                        if latest > current {
+                            let release = UpdateRelease(
+                                version: latestRelease.tagName,
+                                url: latestRelease.htmlUrl,
+                                notes: latestRelease.body
+                            )
+                            updateState = .updateAvailable(release)
+                        } else {
+                            updateState = .upToDate(latest: latestRelease.tagName)
+                        }
+                    } else {
+                        updateState = .failed(localized(.versionParseError))
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    updateState = .failed(error.localizedDescription)
+                }
+            }
+        }
+    }
+
+    private func getCurrentVersion() -> String {
+        return Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
+    }
+
+    private func fetchLatestRelease() async throws -> GitHubRelease {
+        let url = URL(string: "https://api.github.com/repos/RoversX/LaunchNext/releases/latest")!
+        let (data, response) = try await URLSession.shared.data(from: url)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+
+        return try JSONDecoder().decode(GitHubRelease.self, from: data)
+    }
+
+    func openReleaseURL(_ url: URL) {
+        NSWorkspace.shared.open(url)
     }
 }
