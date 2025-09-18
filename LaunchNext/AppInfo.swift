@@ -46,6 +46,21 @@ struct AppInfo: Identifiable, Equatable, Hashable {
 
         consider(preferredName, source: "preferredName")
 
+        if let metadataItem = NSMetadataItem(url: url) {
+            if let displayName = metadataItem.value(forAttribute: kMDItemDisplayName as String) as? String {
+                consider(displayName, source: "MDItemDisplayName")
+            }
+
+            let alternateNamesKey = "kMDItemAlternateNames"
+            if let alternatesValue = metadataItem.value(forAttribute: alternateNamesKey) {
+                if let names = alternatesValue as? [String] {
+                    for name in names { consider(name, source: "MDItemAlternateNames") }
+                } else if let names = alternatesValue as? NSArray {
+                    for case let name as String in names { consider(name, source: "MDItemAlternateNames") }
+                }
+            }
+        }
+
         if let bundle = Bundle(url: url) {
             consider(localizedInfoValue(for: "CFBundleDisplayName", in: bundle), source: "InfoPlist.strings CFBundleDisplayName")
             consider(localizedInfoValue(for: "CFBundleName", in: bundle), source: "InfoPlist.strings CFBundleName")
