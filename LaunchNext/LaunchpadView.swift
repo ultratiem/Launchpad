@@ -126,7 +126,11 @@ struct LaunchpadView: View {
     private var isFolderOpen: Bool { appStore.openFolder != nil }
     
     private var config: GridConfig {
-        GridConfig(isFullscreen: appStore.isFullscreenMode)
+        GridConfig(isFullscreen: appStore.isFullscreenMode,
+                   columns: appStore.gridColumnsPerPage,
+                   rows: appStore.gridRowsPerPage,
+                   columnSpacing: CGFloat(appStore.iconColumnSpacing),
+                   rowSpacing: CGFloat(appStore.iconRowSpacing))
     }
 
     private var backdropOpacity: Double {
@@ -1728,20 +1732,32 @@ extension LaunchpadView {
 
 struct GridConfig {
     let isFullscreen: Bool
-    
-    init(isFullscreen: Bool = false) {
+    private let columnCount: Int
+    private let rowCount: Int
+    private let columnSpacingValue: CGFloat
+    private let rowSpacingValue: CGFloat
+
+    init(isFullscreen: Bool = false,
+         columns: Int = 7,
+         rows: Int = 5,
+         columnSpacing: CGFloat = 20,
+         rowSpacing: CGFloat = 14) {
         self.isFullscreen = isFullscreen
+        self.columnCount = max(1, columns)
+        self.rowCount = max(1, rows)
+        self.columnSpacingValue = max(0, columnSpacing)
+        self.rowSpacingValue = max(0, rowSpacing)
     }
-    
-    var itemsPerPage: Int { 35 }
-    var columns: Int { 7 }
-    var rows: Int { 5 }
-    
+
+    var itemsPerPage: Int { columnCount * rowCount }
+    var columns: Int { columnCount }
+    var rows: Int { rowCount }
+    var columnSpacing: CGFloat { columnSpacingValue }
+    var rowSpacing: CGFloat { rowSpacingValue }
+
     let maxBounce: CGFloat = 80
     let pageSpacing: CGFloat = 80
-    let rowSpacing: CGFloat = 14
-    let columnSpacing: CGFloat = 20
-    
+
     struct PageNavigation {
         let edgeFlipMargin: CGFloat = 15
         let autoFlipInterval: TimeInterval = 0.8 // 拖拽贴边翻页两次之间间隔0.8秒

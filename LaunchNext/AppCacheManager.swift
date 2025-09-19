@@ -28,7 +28,11 @@ final class AppCacheManager: ObservableObject {
     // MARK: - 公共接口
     
     /// 生成应用缓存 - 在应用启动或扫描后调用
-    func generateCache(from apps: [AppInfo], items: [LaunchpadItem]) {
+    func generateCache(from apps: [AppInfo],
+                       items: [LaunchpadItem],
+                       itemsPerPage: Int,
+                       columns: Int,
+                       rows: Int) {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             
@@ -63,7 +67,10 @@ final class AppCacheManager: ObservableObject {
             self.cacheAppIcons(uniqueApps)
             
             // 缓存网格布局数据
-            self.cacheGridLayout(items)
+            self.cacheGridLayout(items,
+                                 itemsPerPage: itemsPerPage,
+                                 columns: columns,
+                                 rows: rows)
             
             DispatchQueue.main.async {
                 self.isCacheValid = true
@@ -173,7 +180,11 @@ final class AppCacheManager: ObservableObject {
     }
     
     /// 手动刷新缓存
-    func refreshCache(from apps: [AppInfo], items: [LaunchpadItem]) {
+    func refreshCache(from apps: [AppInfo],
+                      items: [LaunchpadItem],
+                      itemsPerPage: Int,
+                      columns: Int,
+                      rows: Int) {
         // 收集所有需要缓存的应用，包括文件夹内的应用
         var allApps: [AppInfo] = []
         allApps.append(contentsOf: apps)
@@ -195,7 +206,11 @@ final class AppCacheManager: ObservableObject {
             }
         }
         
-        generateCache(from: uniqueApps, items: items)
+        generateCache(from: uniqueApps,
+                      items: items,
+                      itemsPerPage: itemsPerPage,
+                      columns: columns,
+                      rows: rows)
     }
     
     // MARK: - 私有方法
@@ -228,16 +243,19 @@ final class AppCacheManager: ObservableObject {
         cacheLock.unlock()
     }
     
-    private func cacheGridLayout(_ items: [LaunchpadItem]) {
+    private func cacheGridLayout(_ items: [LaunchpadItem],
+                                 itemsPerPage: Int,
+                                 columns: Int,
+                                 rows: Int) {
         // 缓存网格布局相关的计算数据
         let layoutData = GridLayoutCacheData(
             totalItems: items.count,
-            itemsPerPage: 35,
-            columns: 7,
-            rows: 5,
-            pageCount: (items.count + 34) / 35
+            itemsPerPage: itemsPerPage,
+            columns: columns,
+            rows: rows,
+            pageCount: (items.count + max(itemsPerPage, 1) - 1) / max(itemsPerPage, 1)
         )
-        let pageInfo = calculatePageInfo(for: items)
+        let pageInfo = calculatePageInfo(for: items, itemsPerPage: itemsPerPage)
         let key = cacheKeyGenerator.generateGridLayoutKey(for: "main")
         let pageKey = cacheKeyGenerator.generateGridLayoutKey(for: "pages")
         cacheLock.lock()
@@ -248,15 +266,15 @@ final class AppCacheManager: ObservableObject {
     }
     
     /// 计算页面信息
-    private func calculatePageInfo(for items: [LaunchpadItem]) -> [PageInfo] {
-        let itemsPerPage = 35
-        let pageCount = (items.count + itemsPerPage - 1) / itemsPerPage
-        
+    private func calculatePageInfo(for items: [LaunchpadItem], itemsPerPage: Int) -> [PageInfo] {
+        let sanitizedItemsPerPage = max(itemsPerPage, 1)
+        let pageCount = (items.count + sanitizedItemsPerPage - 1) / sanitizedItemsPerPage
+
         var pages: [PageInfo] = []
-        
+
         for pageIndex in 0..<pageCount {
-            let startIndex = pageIndex * itemsPerPage
-            let endIndex = min(startIndex + itemsPerPage, items.count)
+            let startIndex = pageIndex * sanitizedItemsPerPage
+            let endIndex = min(startIndex + sanitizedItemsPerPage, items.count)
             let pageItems = Array(items[startIndex..<endIndex])
             
             let appCount = pageItems.filter { if case .app = $0 { return true } else { return false } }.count

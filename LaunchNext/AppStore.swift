@@ -3,6 +3,8 @@ import AppKit
 import Combine
 import SwiftData
 import UniformTypeIdentifiers
+import Carbon
+import Carbon.HIToolbox
 
 private struct GitHubRelease: Decodable {
     let tagName: String
@@ -56,12 +58,128 @@ final class AppStore: ObservableObject {
     }
 
     private static let customTitlesKey = "customAppTitles"
+    private static let gridColumnsKey = "gridColumnsPerPage"
+    private static let gridRowsKey = "gridRowsPerPage"
+    private static let columnSpacingKey = "gridColumnSpacing"
+    private static let rowSpacingKey = "gridRowSpacing"
+    private static let rememberPageKey = "rememberLastPage"
+    private static let rememberedPageIndexKey = "rememberedPageIndex"
+    private static let globalHotKeyKey = "globalHotKeyConfiguration"
+
+    private static let minColumnsPerPage = 4
+    private static let maxColumnsPerPage = 10
+    private static let minRowsPerPage = 3
+    private static let maxRowsPerPage = 8
+    private static let minColumnSpacing: Double = 8
+    private static let maxColumnSpacing: Double = 50
+    private static let minRowSpacing: Double = 6
+    private static let maxRowSpacing: Double = 40
+    static var gridColumnRange: ClosedRange<Int> { minColumnsPerPage...maxColumnsPerPage }
+    static var gridRowRange: ClosedRange<Int> { minRowsPerPage...maxRowsPerPage }
+    static var columnSpacingRange: ClosedRange<Double> { minColumnSpacing...maxColumnSpacing }
+    static var rowSpacingRange: ClosedRange<Double> { minRowSpacing...maxRowSpacing }
+
+    struct HotKeyConfiguration: Equatable {
+        let keyCode: UInt16
+        let modifiersRawValue: NSEvent.ModifierFlags.RawValue
+
+        init(keyCode: UInt16, modifierFlags: NSEvent.ModifierFlags) {
+            self.keyCode = keyCode
+            self.modifiersRawValue = modifierFlags.normalizedShortcutFlags.rawValue
+        }
+
+        init?(dictionary: [String: Any]) {
+            guard let rawKeyCode = dictionary["keyCode"] as? Int,
+                  let rawModifiers = dictionary["modifiers"] as? Int else {
+                return nil
+            }
+            self.keyCode = UInt16(rawKeyCode)
+            self.modifiersRawValue = NSEvent.ModifierFlags.RawValue(rawModifiers)
+        }
+
+        var modifierFlags: NSEvent.ModifierFlags {
+            NSEvent.ModifierFlags(rawValue: modifiersRawValue).normalizedShortcutFlags
+        }
+
+        var dictionaryRepresentation: [String: Any] {
+            ["keyCode": Int(keyCode), "modifiers": Int(modifiersRawValue)]
+        }
+
+        var carbonModifierFlags: UInt32 { modifierFlags.carbonFlags }
+        var keyCodeUInt32: UInt32 { UInt32(keyCode) }
+
+        var displayString: String {
+            let modifierSymbols = modifierFlags.displaySymbols.joined()
+            let keyName = HotKeyConfiguration.keyDisplayName(for: keyCode)
+            return modifierSymbols + keyName
+        }
+
+        private static func keyDisplayName(for keyCode: UInt16) -> String {
+            if let special = Self.specialKeyNames[keyCode] {
+                return special
+            }
+
+            guard let layout = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue(),
+                  let rawPtr = TISGetInputSourceProperty(layout, kTISPropertyUnicodeKeyLayoutData) else {
+                return String(format: "Key %d", keyCode)
+            }
+
+            let data = unsafeBitCast(rawPtr, to: CFData.self) as Data
+            return data.withUnsafeBytes { ptr -> String in
+                guard let layoutPtr = ptr.baseAddress?.assumingMemoryBound(to: UCKeyboardLayout.self) else {
+                    return String(format: "Key %d", keyCode)
+                }
+                var keysDown: UInt32 = 0
+                var chars: [UniChar] = Array(repeating: 0, count: 4)
+                var length: Int = 0
+                let error = UCKeyTranslate(layoutPtr,
+                                           keyCode,
+                                           UInt16(kUCKeyActionDisplay),
+                                           0,
+                                           UInt32(LMGetKbdType()),
+                                           UInt32(kUCKeyTranslateNoDeadKeysBit),
+                                           &keysDown,
+                                           chars.count,
+                                           &length,
+                                           &chars)
+                if error == noErr, length > 0 {
+                    return String(utf16CodeUnits: chars, count: length).uppercased()
+                }
+                return fallbackName(for: keyCode)
+            }
+        }
+
+        private static func fallbackName(for keyCode: UInt16) -> String {
+            Self.specialKeyNames[keyCode] ?? String(format: "Key %d", keyCode)
+        }
+
+        private static let specialKeyNames: [UInt16: String] = [
+            36: "Return",
+            48: "Tab",
+            49: "Space",
+            51: "Delete",
+            53: "Esc",
+            122: "F1", 120: "F2", 99: "F3", 118: "F4", 96: "F5", 97: "F6", 98: "F7", 100: "F8",
+            101: "F9", 109: "F10", 103: "F11", 111: "F12",
+            123: "←",
+            124: "→",
+            125: "↓",
+            126: "↑"
+        ]
+    }
     @Published var apps: [AppInfo] = []
     @Published var folders: [FolderInfo] = []
     @Published var items: [LaunchpadItem] = []
     @Published var isSetting = false
     @Published var isInitialLoading = true
-    @Published var currentPage = 0
+    @Published var currentPage = 0 {
+        didSet {
+            if currentPage < 0 { currentPage = 0; return }
+            if rememberLastPage {
+                UserDefaults.standard.set(currentPage, forKey: Self.rememberedPageIndexKey)
+            }
+        }
+    }
     @Published var searchText: String = ""
     @Published var isStartOnLogin: Bool = false
     @Published var isFullscreenMode: Bool = false {
@@ -78,7 +196,22 @@ final class AppStore: ObservableObject {
             }
         }
     }
-    
+    private static func clampColumns(_ value: Int) -> Int {
+        min(max(value, minColumnsPerPage), maxColumnsPerPage)
+    }
+
+    private static func clampRows(_ value: Int) -> Int {
+        min(max(value, minRowsPerPage), maxRowsPerPage)
+    }
+
+    private static func clampColumnSpacing(_ value: Double) -> Double {
+        min(max(value, minColumnSpacing), maxColumnSpacing)
+    }
+
+    private static func clampRowSpacing(_ value: Double) -> Double {
+        min(max(value, minRowSpacing), maxRowSpacing)
+    }
+
     // 图标标题显示
     @Published var showLabels: Bool = {
         if UserDefaults.standard.object(forKey: "showLabels") == nil { return true }
@@ -90,6 +223,58 @@ final class AppStore: ObservableObject {
     @Published var scrollSensitivity: Double {
         didSet {
             UserDefaults.standard.set(scrollSensitivity, forKey: "scrollSensitivity")
+        }
+    }
+
+    @Published var gridColumnsPerPage: Int {
+        didSet {
+            let clamped = Self.clampColumns(gridColumnsPerPage)
+            if gridColumnsPerPage != clamped {
+                gridColumnsPerPage = clamped
+                return
+            }
+            guard gridColumnsPerPage != oldValue else { return }
+            UserDefaults.standard.set(gridColumnsPerPage, forKey: Self.gridColumnsKey)
+            handleGridConfigurationChange()
+        }
+    }
+
+    @Published var gridRowsPerPage: Int {
+        didSet {
+            let clamped = Self.clampRows(gridRowsPerPage)
+            if gridRowsPerPage != clamped {
+                gridRowsPerPage = clamped
+                return
+            }
+            guard gridRowsPerPage != oldValue else { return }
+            UserDefaults.standard.set(gridRowsPerPage, forKey: Self.gridRowsKey)
+            handleGridConfigurationChange()
+        }
+    }
+
+    @Published var iconColumnSpacing: Double {
+        didSet {
+            let clamped = Self.clampColumnSpacing(iconColumnSpacing)
+            if iconColumnSpacing != clamped {
+                iconColumnSpacing = clamped
+                return
+            }
+            guard iconColumnSpacing != oldValue else { return }
+            UserDefaults.standard.set(iconColumnSpacing, forKey: Self.columnSpacingKey)
+            triggerGridRefresh()
+        }
+    }
+
+    @Published var iconRowSpacing: Double {
+        didSet {
+            let clamped = Self.clampRowSpacing(iconRowSpacing)
+            if iconRowSpacing != clamped {
+                iconRowSpacing = clamped
+                return
+            }
+            guard iconRowSpacing != oldValue else { return }
+            UserDefaults.standard.set(iconRowSpacing, forKey: Self.rowSpacingKey)
+            triggerGridRefresh()
         }
     }
 
@@ -163,6 +348,29 @@ final class AppStore: ObservableObject {
         }
     }
 
+    @Published var rememberLastPage: Bool = AppStore.defaultRememberSetting() {
+        didSet {
+            UserDefaults.standard.set(rememberLastPage, forKey: Self.rememberPageKey)
+            if rememberLastPage {
+                UserDefaults.standard.set(currentPage, forKey: Self.rememberedPageIndexKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Self.rememberedPageIndexKey)
+            }
+        }
+    }
+
+    private static func defaultRememberSetting() -> Bool {
+        if UserDefaults.standard.object(forKey: rememberPageKey) == nil { return false }
+        return UserDefaults.standard.bool(forKey: rememberPageKey)
+    }
+
+    @Published var globalHotKey: HotKeyConfiguration? = AppStore.loadHotKeyConfiguration() {
+        didSet {
+            persistHotKeyConfiguration()
+            AppDelegate.shared?.updateGlobalHotKey(configuration: globalHotKey)
+        }
+    }
+
     @Published private(set) var currentAppIcon: NSImage {
         didSet { applyCurrentAppIcon() }
     }
@@ -223,7 +431,7 @@ final class AppStore: ObservableObject {
     private let defaultAppIcon: NSImage
     
     // 计算属性
-    private var itemsPerPage: Int { 35 }
+    private var itemsPerPage: Int { gridColumnsPerPage * gridRowsPerPage }
     
 
 
@@ -241,8 +449,33 @@ final class AppStore: ObservableObject {
         } else {
             self.isFullscreenMode = UserDefaults.standard.bool(forKey: "isFullscreenMode")
         }
-        let storedSensitivity = UserDefaults.standard.double(forKey: "scrollSensitivity")
+        let defaults = UserDefaults.standard
+
+        let shouldRememberPage = defaults.object(forKey: Self.rememberPageKey) == nil ? false : defaults.bool(forKey: Self.rememberPageKey)
+        let savedPageIndex = defaults.object(forKey: Self.rememberedPageIndexKey) as? Int
+
+        let storedSensitivity = defaults.double(forKey: "scrollSensitivity")
         self.scrollSensitivity = storedSensitivity == 0 ? 0.15 : storedSensitivity
+
+        let storedColumns = defaults.object(forKey: Self.gridColumnsKey) as? Int ?? 7
+        let clampedColumns = Self.clampColumns(storedColumns)
+        self.gridColumnsPerPage = clampedColumns
+        defaults.set(clampedColumns, forKey: Self.gridColumnsKey)
+
+        let storedRows = defaults.object(forKey: Self.gridRowsKey) as? Int ?? 5
+        let clampedRows = Self.clampRows(storedRows)
+        self.gridRowsPerPage = clampedRows
+        defaults.set(clampedRows, forKey: Self.gridRowsKey)
+
+        let storedColumnSpacing = defaults.object(forKey: Self.columnSpacingKey) as? Double ?? 20.0
+        let clampedColumnSpacing = Self.clampColumnSpacing(storedColumnSpacing)
+        self.iconColumnSpacing = clampedColumnSpacing
+        defaults.set(clampedColumnSpacing, forKey: Self.columnSpacingKey)
+
+        let storedRowSpacing = defaults.object(forKey: Self.rowSpacingKey) as? Double ?? 14.0
+        let clampedRowSpacing = Self.clampRowSpacing(storedRowSpacing)
+        self.iconRowSpacing = clampedRowSpacing
+        defaults.set(clampedRowSpacing, forKey: Self.rowSpacingKey)
         // 读取图标缩放默认值
         if let v = UserDefaults.standard.object(forKey: "iconScale") as? Double {
             self.iconScale = v
@@ -265,8 +498,8 @@ final class AppStore: ObservableObject {
         if UserDefaults.standard.object(forKey: "showFPSOverlay") == nil {
             UserDefaults.standard.set(false, forKey: "showFPSOverlay")
         }
-        if UserDefaults.standard.object(forKey: "pageIndicatorOffset") == nil {
-            UserDefaults.standard.set(27.0, forKey: "pageIndicatorOffset")
+        if defaults.object(forKey: "pageIndicatorOffset") == nil {
+            defaults.set(27.0, forKey: "pageIndicatorOffset")
         }
 
         let storedDuration = UserDefaults.standard.double(forKey: "animationDuration")
@@ -284,6 +517,11 @@ final class AppStore: ObservableObject {
             self.hasCustomAppIcon = false
         }
         applyCurrentAppIcon()
+
+        self.rememberLastPage = shouldRememberPage
+        if shouldRememberPage, let savedPageIndex {
+            self.currentPage = max(0, savedPageIndex)
+        }
     }
 
     private static func loadCustomTitles() -> [String: String] {
@@ -302,6 +540,11 @@ final class AppStore: ObservableObject {
         return result
     }
 
+    private static func loadHotKeyConfiguration() -> HotKeyConfiguration? {
+        guard let dict = UserDefaults.standard.dictionary(forKey: globalHotKeyKey) else { return nil }
+        return HotKeyConfiguration(dictionary: dict)
+    }
+
     private func persistCustomTitles() {
         let sanitized = customTitles.reduce(into: [String: String]()) { partialResult, entry in
             let trimmed = entry.value.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -314,6 +557,15 @@ final class AppStore: ObservableObject {
             UserDefaults.standard.removeObject(forKey: AppStore.customTitlesKey)
         } else {
             UserDefaults.standard.set(sanitized, forKey: AppStore.customTitlesKey)
+        }
+    }
+
+    private func persistHotKeyConfiguration() {
+        let defaults = UserDefaults.standard
+        if let config = globalHotKey {
+            defaults.set(config.dictionaryRepresentation, forKey: Self.globalHotKeyKey)
+        } else {
+            defaults.removeObject(forKey: Self.globalHotKeyKey)
         }
     }
 
@@ -1740,6 +1992,7 @@ final class AppStore: ObservableObject {
     
     // 触发网格视图刷新，用于拖拽操作后的界面更新
     func triggerGridRefresh() {
+        clampCurrentPageWithinBounds()
         gridRefreshTrigger = UUID()
     }
     
@@ -1765,6 +2018,14 @@ final class AppStore: ObservableObject {
             try modelContext.save()
         } catch {
             // 忽略错误，确保重置流程继续进行
+        }
+    }
+
+    private func clampCurrentPageWithinBounds() {
+        let perPage = max(itemsPerPage, 1)
+        let maxPageIndex = items.isEmpty ? 0 : max(0, (items.count - 1) / perPage)
+        if currentPage > maxPageIndex {
+            currentPage = maxPageIndex
         }
     }
 
@@ -1855,6 +2116,29 @@ final class AppStore: ObservableObject {
             
             // 触发网格视图刷新
             triggerGridRefresh()
+        }
+    }
+
+    private func handleGridConfigurationChange() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.compactItemsWithinPages()
+            self.removeEmptyPages()
+            self.cleanupUnusedNewPage()
+            let maxPageIndex = max(0, (self.items.count - 1) / max(self.itemsPerPage, 1))
+            if self.currentPage > maxPageIndex {
+                self.currentPage = maxPageIndex
+            }
+            self.triggerGridRefresh()
+            self.cacheManager.refreshCache(from: self.apps,
+                                           items: self.items,
+                                           itemsPerPage: self.itemsPerPage,
+                                           columns: self.gridColumnsPerPage,
+                                           rows: self.gridRowsPerPage)
+            if self.rememberLastPage {
+                UserDefaults.standard.set(self.currentPage, forKey: Self.rememberedPageIndexKey)
+            }
+            self.saveAllOrder()
         }
     }
     
@@ -1965,7 +2249,11 @@ final class AppStore: ObservableObject {
         // 检查缓存是否有效
         if !cacheManager.isCacheValid {
             // 生成新的缓存
-            cacheManager.generateCache(from: apps, items: items)
+            cacheManager.generateCache(from: apps,
+                                      items: items,
+                                      itemsPerPage: itemsPerPage,
+                                      columns: gridColumnsPerPage,
+                                      rows: gridRowsPerPage)
         } else {
             // 缓存有效，但可以预加载图标
             let appPaths = apps.map { $0.url.path }
@@ -2023,7 +2311,11 @@ final class AppStore: ObservableObject {
         // 检查缓存是否需要更新
         if !cacheManager.isCacheValid {
             // 缓存无效，重新生成
-            cacheManager.generateCache(from: apps, items: items)
+            cacheManager.generateCache(from: apps,
+                                      items: items,
+                                      itemsPerPage: itemsPerPage,
+                                      columns: gridColumnsPerPage,
+                                      rows: gridRowsPerPage)
         } else {
             // 缓存有效，只更新变化的部分
             let changedAppPaths = apps.map { $0.url.path }
@@ -2170,7 +2462,11 @@ final class AppStore: ObservableObject {
         customTitleRefreshWorkItem?.cancel()
         let work = DispatchWorkItem { [weak self] in
             guard let self else { return }
-            self.cacheManager.refreshCache(from: self.apps, items: self.items)
+            self.cacheManager.refreshCache(from: self.apps,
+                                           items: self.items,
+                                           itemsPerPage: self.itemsPerPage,
+                                           columns: self.gridColumnsPerPage,
+                                           rows: self.gridRowsPerPage)
         }
         customTitleRefreshWorkItem = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: work)
@@ -2259,7 +2555,11 @@ final class AppStore: ObservableObject {
     /// 文件夹操作后刷新缓存，确保搜索功能正常工作
     private func refreshCacheAfterFolderOperation() {
         // 直接刷新缓存，确保包含所有应用（包括文件夹内的应用）
-        cacheManager.refreshCache(from: apps, items: items)
+        cacheManager.refreshCache(from: apps,
+                                  items: items,
+                                  itemsPerPage: itemsPerPage,
+                                  columns: gridColumnsPerPage,
+                                  rows: gridRowsPerPage)
         
         // 清空搜索文本，确保搜索状态重置
         // 这样可以避免搜索时显示过时的结果
@@ -2268,6 +2568,38 @@ final class AppStore: ObservableObject {
                 self?.searchText = ""
             }
         }
+    }
+
+    func setGlobalHotKey(keyCode: UInt16, modifierFlags: NSEvent.ModifierFlags) {
+        let normalized = modifierFlags.normalizedShortcutFlags
+        let configuration = HotKeyConfiguration(keyCode: keyCode, modifierFlags: normalized)
+        if globalHotKey != configuration {
+            globalHotKey = configuration
+        }
+    }
+
+    func clearGlobalHotKey() {
+        if globalHotKey != nil {
+            globalHotKey = nil
+        }
+    }
+
+    func persistCurrentPageIfNeeded() {
+        guard rememberLastPage else { return }
+        UserDefaults.standard.set(currentPage, forKey: Self.rememberedPageIndexKey)
+    }
+
+    func hotKeyDisplayText(nonePlaceholder: String) -> String {
+        guard let config = globalHotKey else { return nonePlaceholder }
+        let base = config.displayString
+        if config.modifierFlags.isEmpty {
+            return base + " • " + localized(.shortcutNoModifierWarning)
+        }
+        return base
+    }
+
+    func syncGlobalHotKeyRegistration() {
+        AppDelegate.shared?.updateGlobalHotKey(configuration: globalHotKey)
     }
     
     // MARK: - 导入应用排序功能
@@ -2590,7 +2922,33 @@ final class AppStore: ObservableObject {
         return try JSONDecoder().decode(GitHubRelease.self, from: data)
     }
 
-    func openReleaseURL(_ url: URL) {
-        NSWorkspace.shared.open(url)
+func openReleaseURL(_ url: URL) {
+    NSWorkspace.shared.open(url)
+}
+}
+
+extension NSEvent.ModifierFlags {
+    static let shortcutComponents: NSEvent.ModifierFlags = [.command, .option, .control, .shift]
+
+    var normalizedShortcutFlags: NSEvent.ModifierFlags {
+        intersection(.deviceIndependentFlagsMask).intersection(Self.shortcutComponents)
+    }
+
+    var carbonFlags: UInt32 {
+        var value: UInt32 = 0
+        if contains(.command) { value |= UInt32(cmdKey) }
+        if contains(.option) { value |= UInt32(optionKey) }
+        if contains(.control) { value |= UInt32(controlKey) }
+        if contains(.shift) { value |= UInt32(shiftKey) }
+        return value
+    }
+
+    var displaySymbols: [String] {
+        var symbols: [String] = []
+        if contains(.control) { symbols.append("⌃") }
+        if contains(.option) { symbols.append("⌥") }
+        if contains(.shift) { symbols.append("⇧") }
+        if contains(.command) { symbols.append("⌘") }
+        return symbols
     }
 }

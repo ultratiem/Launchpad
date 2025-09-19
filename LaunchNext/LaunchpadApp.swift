@@ -3,6 +3,8 @@ import AppKit
 import SwiftData
 import Combine
 import QuartzCore
+import Carbon
+import Carbon.HIToolbox
 
 extension Notification.Name {
     static let launchpadWindowShown = Notification.Name("LaunchpadWindowShown")
@@ -27,6 +29,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
     private let minimumContentSize = NSSize(width: 800, height: 600)
     private var lastShowAt: Date?
     private var cancellables = Set<AnyCancellable>()
+    private var hotKeyRef: EventHotKeyRef?
+    private var hotKeyEventHandler: EventHandlerRef?
     
     let appStore = AppStore()
     var modelContainer: ModelContainer?
@@ -38,6 +42,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         Self.shared = self
+        appStore.syncGlobalHotKeyRegistration()
         
         setupWindow()
         appStore.performInitialScanIfNeeded()
@@ -45,7 +50,55 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
         
         if appStore.isFullscreenMode { updateWindowMode(isFullscreen: true) }
     }
-    
+
+    // MARK: - Global Hotkey
+
+    func updateGlobalHotKey(configuration: AppStore.HotKeyConfiguration?) {
+        unregisterGlobalHotKey()
+        guard let configuration else { return }
+        registerGlobalHotKey(configuration)
+    }
+
+    private func registerGlobalHotKey(_ configuration: AppStore.HotKeyConfiguration) {
+        ensureHotKeyEventHandler()
+        var hotKeyID = EventHotKeyID(signature: fourCharCode("LNXK"), id: 1)
+        let status = RegisterEventHotKey(configuration.keyCodeUInt32,
+                                         configuration.carbonModifierFlags,
+                                         hotKeyID,
+                                         GetEventDispatcherTarget(),
+                                         0,
+                                         &hotKeyRef)
+        if status != noErr {
+            NSLog("LaunchNext: Failed to register hotkey (status %d)", status)
+        }
+    }
+
+    private func unregisterGlobalHotKey() {
+        if let hotKeyRef {
+            UnregisterEventHotKey(hotKeyRef)
+            self.hotKeyRef = nil
+        }
+        if let handler = hotKeyEventHandler, hotKeyRef == nil {
+            RemoveEventHandler(handler)
+            hotKeyEventHandler = nil
+        }
+    }
+
+    private func ensureHotKeyEventHandler() {
+        guard hotKeyEventHandler == nil else { return }
+        var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
+        let status = InstallEventHandler(GetEventDispatcherTarget(), hotKeyEventCallback, 1, &eventType, UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque()), &hotKeyEventHandler)
+        if status != noErr {
+            NSLog("LaunchNext: Failed to install hotkey handler (status %d)", status)
+        }
+    }
+
+    fileprivate func handleHotKeyEvent() {
+        DispatchQueue.main.async { [weak self] in
+            self?.toggleWindow()
+        }
+    }
+
     private func setupWindow() {
         guard let screen = NSScreen.main else { return }
         let rect = calculateContentRect(for: screen)
@@ -111,6 +164,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
         startPendingWindowTransition()
     }
 
+    func toggleWindow() {
+        if windowIsVisible {
+            hideWindow()
+        } else {
+            showWindow()
+        }
+    }
+
     // MARK: - Quit with fade
     func quitWithFade() {
         guard !isTerminating else { NSApp.terminate(nil); return }
@@ -133,6 +194,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
         guard !isTerminating else { return .terminateNow }
         quitWithFade()
         return .terminateLater
+    }
+
+    deinit {
+        unregisterGlobalHotKey()
     }
     
     func updateWindowMode(isFullscreen: Bool) {
@@ -215,7 +280,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
             window.alphaValue = 1
             window.contentView?.alphaValue = 1
             self.appStore.isSetting = false
-            self.appStore.currentPage = 0
+            if self.appStore.rememberLastPage {
+                self.appStore.persistCurrentPageIfNeeded()
+            } else {
+                self.appStore.currentPage = 0
+            }
             self.appStore.searchText = ""
             self.appStore.openFolder = nil
             self.appStore.saveAllOrder()
@@ -304,4 +373,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
         }
         return true
     }
+}
+
+private func hotKeyEventCallback(eventHandlerCallRef: EventHandlerCallRef?, event: EventRef?, userData: UnsafeMutableRawPointer?) -> OSStatus {
+    guard let userData else { return noErr }
+    let delegate = Unmanaged<AppDelegate>.fromOpaque(userData).takeUnretainedValue()
+    delegate.handleHotKeyEvent()
+    return noErr
+}
+
+private func fourCharCode(_ string: String) -> FourCharCode {
+    var result: UInt32 = 0
+    for scalar in string.unicodeScalars.prefix(4) {
+        result = (result << 8) | (scalar.value & 0xFF)
+    }
+    return result
 }

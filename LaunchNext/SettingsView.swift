@@ -13,6 +13,9 @@ struct SettingsView: View {
     @State private var editingDrafts: [String: String] = [:]
     @State private var editingEntries: Set<String> = []
     @State private var iconImportError: String? = nil
+    @State private var isCapturingShortcut = false
+    @State private var shortcutCaptureMonitor: Any?
+    @State private var pendingShortcut: AppStore.HotKeyConfiguration?
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -83,11 +86,14 @@ struct SettingsView: View {
         } message: {
             Text(iconImportError ?? "")
         }
+        .onDisappear {
+            stopShortcutCapture(cancel: false)
+        }
     }
 
     private func getVersion() -> String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "未知"
-    }
+}
 
 private enum SettingsSection: String, CaseIterable, Identifiable {
     case general
@@ -140,6 +146,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         }
     }
 }
+
     @ViewBuilder
     private func detailView(for section: SettingsSection) -> some View {
         GeometryReader { proxy in
@@ -463,6 +470,74 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         editingDrafts.removeValue(forKey: entry.id)
     }
 
+    private static let modifierOnlyKeyCodes: Set<UInt16> = [55, 54, 58, 61, 56, 60, 59, 62, 57]
+
+    private func startShortcutCapture() {
+        stopShortcutCapture(cancel: false)
+        pendingShortcut = nil
+        isCapturingShortcut = true
+        shortcutCaptureMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { event in
+            handleShortcutCapture(event: event)
+        }
+    }
+
+    private func stopShortcutCapture(cancel: Bool) {
+        if let monitor = shortcutCaptureMonitor {
+            NSEvent.removeMonitor(monitor)
+            shortcutCaptureMonitor = nil
+        }
+        if cancel {
+            pendingShortcut = nil
+            if isCapturingShortcut { NSSound.beep() }
+        }
+        isCapturingShortcut = false
+    }
+
+    private func handleShortcutCapture(event: NSEvent) -> NSEvent? {
+        let normalizedFlags = event.modifierFlags.normalizedShortcutFlags
+
+        if event.keyCode == 53 && normalizedFlags.isEmpty {
+            stopShortcutCapture(cancel: true)
+            return nil
+        }
+
+        guard !normalizedFlags.isEmpty, !Self.modifierOnlyKeyCodes.contains(event.keyCode) else {
+            NSSound.beep()
+            return nil
+        }
+
+        pendingShortcut = AppStore.HotKeyConfiguration(keyCode: event.keyCode, modifierFlags: normalizedFlags)
+        return nil
+    }
+
+    private func savePendingShortcut() {
+        guard let shortcut = pendingShortcut else { return }
+        appStore.setGlobalHotKey(keyCode: shortcut.keyCode, modifierFlags: shortcut.modifierFlags)
+        pendingShortcut = nil
+        stopShortcutCapture(cancel: false)
+    }
+
+    private var shortcutStatusText: String {
+        if isCapturingShortcut {
+            if let shortcut = pendingShortcut {
+                let base = shortcut.displayString
+                if shortcut.modifierFlags.isEmpty {
+                    return base + " • " + appStore.localized(.shortcutNoModifierWarning)
+                }
+                return base
+            }
+            return appStore.localized(.shortcutCapturePrompt)
+        }
+        if let saved = appStore.globalHotKey {
+            let base = saved.displayString
+            if saved.modifierFlags.isEmpty {
+                return base + " • " + appStore.localized(.shortcutNoModifierWarning)
+            }
+            return base
+        }
+        return appStore.localized(.shortcutNotSet)
+    }
+
     private var aboutSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -781,6 +856,104 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
                         Text(appStore.localized(.larger)).font(.footnote)
                     }
                 }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(appStore.localized(.iconsPerRow))
+                            .font(.headline)
+                        Spacer()
+                        Stepper(value: $appStore.gridColumnsPerPage, in: AppStore.gridColumnRange) {
+                            Text("\(appStore.gridColumnsPerPage)")
+                                .font(.callout.monospacedDigit())
+                        }
+                        .controlSize(.small)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(appStore.localized(.rowsPerPage))
+                            .font(.headline)
+                        Spacer()
+                        Stepper(value: $appStore.gridRowsPerPage, in: AppStore.gridRowRange) {
+                            Text("\(appStore.gridRowsPerPage)")
+                                .font(.callout.monospacedDigit())
+                        }
+                        .controlSize(.small)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(appStore.localized(.iconHorizontalSpacing))
+                            .font(.headline)
+                        Spacer()
+                        Text("\(Int(appStore.iconColumnSpacing)) pt")
+                            .font(.callout.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(value: $appStore.iconColumnSpacing,
+                           in: AppStore.columnSpacingRange,
+                           step: 1)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(appStore.localized(.iconVerticalSpacing))
+                            .font(.headline)
+                        Spacer()
+                        Text("\(Int(appStore.iconRowSpacing)) pt")
+                            .font(.callout.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(value: $appStore.iconRowSpacing,
+                           in: AppStore.rowSpacingRange,
+                           step: 1)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(appStore.localized(.gridSizeChangeWarning))
+                    Text(appStore.localized(.pageIndicatorHint))
+                        .foregroundStyle(.tertiary)
+                }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .padding(.top, 2)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(appStore.localized(.globalShortcutTitle))
+                        .font(.headline)
+                    HStack(spacing: 12) {
+                        Button {
+                            if isCapturingShortcut {
+                                stopShortcutCapture(cancel: true)
+                            } else {
+                                startShortcutCapture()
+                            }
+                        } label: {
+                            Text(isCapturingShortcut ? appStore.localized(.cancel) : appStore.localized(.shortcutSetButton))
+                        }
+
+                        Button(appStore.localized(.shortcutSaveButton)) {
+                            savePendingShortcut()
+                        }
+                        .disabled(!(isCapturingShortcut && pendingShortcut != nil))
+
+                        Button(appStore.localized(.shortcutClearButton)) {
+                            stopShortcutCapture(cancel: false)
+                            pendingShortcut = nil
+                            appStore.clearGlobalHotKey()
+                        }
+                        .disabled(!isCapturingShortcut && appStore.globalHotKey == nil)
+                    }
+
+                    Text(shortcutStatusText)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+
+                Toggle(appStore.localized(.rememberPageTitle), isOn: $appStore.rememberLastPage)
+                    .toggleStyle(.switch)
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(appStore.localized(.labelFontSize))
