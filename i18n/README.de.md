@@ -15,7 +15,7 @@ macOS Tahoe hat das Launchpad entfernt, und es ist so schwer zu bedienen, es nut
 
 *Basierend auf [LaunchNow](https://github.com/ggkevinnnn/LaunchNow) von ggkevinnnn - vielen Dank an das ursprüngliche Projekt! Ich hoffe, diese erweiterte Version kann in das ursprüngliche Repository zurückgeführt werden*
 
-*Da das ursprüngliche Projekt keine Lizenz spezifiziert hat, ist der ursprüngliche Autor willkommen, mich bezüglich Lizenzierung oder anderen Anliegen zu kontaktieren.*
+*Da das ursprüngliche Projekt keine Lizenz spezifiziert hat und der ursprüngliche Autor noch keine Nutzungsberechtigungen geklärt hat, ist der ursprüngliche Autor willkommen, mich bezüglich Lizenzierung oder anderen Anliegen zu kontaktieren.*
 
 ### Was LaunchNext bietet
 - ✅ **Ein-Klick-Import vom alten System-Launchpad** - liest direkt Ihre native Launchpad SQLite-Datenbank (`/private$(getconf DARWIN_USER_DIR)com.apple.dock.launchpad/db/db`) um Ihre bestehenden Ordner, App-Positionen und Layout perfekt zu recreieren
@@ -214,9 +214,6 @@ Da Apple sich von anpassbaren Schnittstellen entfernt, repräsentiert LaunchNext
 
 **LaunchNext** ist nicht nur ein Launchpad-Ersatz—es ist ein Statement, dass Benutzerauswahl wichtig ist.
 
-## Lizenz
-
-MIT-Lizenz - siehe [LICENSE](../LICENSE) Datei für Details.
 
 ---
 

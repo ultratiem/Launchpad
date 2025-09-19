@@ -15,7 +15,7 @@ macOS Tahoe 移除了 Launchpad，新的界面很难用，也不能充分利用�
 
 *基于 [LaunchNow](https://github.com/ggkevinnnn/LaunchNow) (作者 ggkevinnnn) 开发 - 非常感谢原项目！希望这个增强版本能合并回原仓库*
 
-*由于原项目未指定许可证，欢迎原作者联系我讨论许可证或任何相关问题。*
+*由于原项目未指定许可证，原作者暂时没有说明使用权限，欢迎原作者联系我讨论许可证或任何相关问题。*
 
 ### LaunchNext 提供的功能
 - ✅ **一键导入老系统 Launchpad** - 直接读取你的原生 Launchpad SQLite 数据库 (`/private$(getconf DARWIN_USER_DIR)com.apple.dock.launchpad/db/db`) 完美重现你现有的文件夹、应用位置和布局
@@ -207,9 +207,6 @@ xcodebuild -project LaunchNext.xcodeproj -scheme LaunchNext -configuration Relea
 
 **LaunchNext** 不仅仅是 Launchpad 的替代品——它是用户选择很重要的声明。
 
-## 许可证
-
-MIT 许可证 - 详见 [LICENSE](../LICENSE) 文件。
 
 ---
 
