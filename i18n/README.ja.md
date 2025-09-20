@@ -15,7 +15,7 @@ macOS Tahoe は Launchpad を削除しましたが、新しいインターフェ
 
 *[LaunchNow](https://github.com/ggkevinnnn/LaunchNow)（作者：ggkevinnnn）をベースに開発 - 元のプロジェクトに大変感謝しています！この拡張版が元のリポジトリにマージされることを願っています*
 
-*元のプロジェクトにライセンスが指定されておらず、元の作者からはまだ使用権限について明確な説明がありません。ライセンスやその他の関連事項について元の作者からのご連絡をお待ちしております。*
+*LaunchNowはGPL 3ライセンスを選択しており、LaunchNextは同じライセンス条項に従います。*
 
 ### LaunchNext が提供する機能
 - ✅ **旧システム Launchpad からのワンクリックインポート** - ネイティブ Launchpad SQLite データベース（`/private$(getconf DARWIN_USER_DIR)com.apple.dock.launchpad/db/db`）を直接読み取り、既存のフォルダ、アプリの位置、レイアウトを完璧に再現

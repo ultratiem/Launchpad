@@ -54,6 +54,10 @@ enum LocalizationKey: String {
     case showLabels
     case useLocalizedThirdPartyTitles
     case enableAnimations
+    case hoverMagnification
+    case hoverMagnificationScale
+    case activePressEffect
+    case activePressScale
     case animationDurationLabel
     case gridSizeChangeWarning
     case viewOnGitHub
@@ -188,6 +192,10 @@ final class LocalizationManager {
                 .showLabels: "Show labels under icons",
                 .useLocalizedThirdPartyTitles: "Use localized app names",
                 .enableAnimations: "Enable slide animation",
+                .hoverMagnification: "Hover magnification",
+                .hoverMagnificationScale: "Hover scale",
+                .activePressEffect: "Press feedback",
+                .activePressScale: "Press scale",
                 .animationDurationLabel: "Slide animation duration",
                 .gridSizeChangeWarning: "Changing the grid size may reposition some icons.",
                 .pageIndicatorHint: "If vertical spacing feels subtle, adjust the page indicator offset below.",
@@ -291,6 +299,10 @@ final class LocalizationManager {
                 .showLabels: "显示图标文字",
                 .useLocalizedThirdPartyTitles: "使用本地化应用名称",
                 .enableAnimations: "启用滑动动画",
+                .hoverMagnification: "悬停放大效果",
+                .hoverMagnificationScale: "悬停放大倍率",
+                .activePressEffect: "按下缩放反馈",
+                .activePressScale: "按下缩放倍率",
                 .animationDurationLabel: "滑动动画时长",
                 .gridSizeChangeWarning: "调整网格设置可能导致部分图标位置发生变化。",
                 .pageIndicatorHint: "若间距变化不明显，可下调页面指示点的位置。",
@@ -394,6 +406,10 @@ final class LocalizationManager {
                 .showLabels: "アイコン名を表示",
                 .useLocalizedThirdPartyTitles: "アプリ名をローカライズ",
                 .enableAnimations: "スライドアニメーションを有効化",
+                .hoverMagnification: "ホバー拡大",
+                .hoverMagnificationScale: "ホバー倍率",
+                .activePressEffect: "押下時の縮小",
+                .activePressScale: "押下時の倍率",
                 .animationDurationLabel: "スライドアニメーション時間",
                 .gridSizeChangeWarning: "グリッドサイズを変更すると、アイコンの配置が変わる場合があります。",
                 .pageIndicatorHint: "変化が分かりにくいときは、ページインジケーターの位置を調整してください。",
@@ -497,6 +513,10 @@ final class LocalizationManager {
                 .showLabels: "Afficher les noms des applications",
                 .useLocalizedThirdPartyTitles: "Afficher les noms des applications dans la langue du système",
                 .enableAnimations: "Activer l’animation de transition",
+                .hoverMagnification: "Agrandissement au survol",
+                .hoverMagnificationScale: "Facteur d’agrandissement",
+                .activePressEffect: "Réaction à l’appui",
+                .activePressScale: "Facteur d’appui",
                 .animationDurationLabel: "Durée de l’animation de transition",
                 .gridSizeChangeWarning: "Modifier la taille de la grille peut déplacer certaines icônes.",
                 .pageIndicatorHint: "Si le changement semble faible, ajustez l’espacement de l’indicateur ci-dessous.",
@@ -600,6 +620,10 @@ final class LocalizationManager {
                 .showLabels: "Mostrar nombres de iconos",
                 .useLocalizedThirdPartyTitles: "Usar nombres localizados",
                 .enableAnimations: "Activar la animación de deslizamiento",
+                .hoverMagnification: "Ampliación al pasar el cursor",
+                .hoverMagnificationScale: "Factor de ampliación",
+                .activePressEffect: "Retroalimentación al pulsar",
+                .activePressScale: "Factor de pulsación",
                 .animationDurationLabel: "Duración de la animación de deslizamiento",
                 .gridSizeChangeWarning: "Cambiar el tamaño de la cuadrícula puede recolocar algunos iconos.",
                 .pageIndicatorHint: "Si notas poco cambio, ajusta el indicador de página más abajo.",
@@ -703,6 +727,10 @@ final class LocalizationManager {
                 .showLabels: "Beschriftungen unter Symbolen anzeigen",
                 .useLocalizedThirdPartyTitles: "Lokalisierte App-Namen verwenden",
                 .enableAnimations: "Slide-Animation aktivieren",
+                .hoverMagnification: "Vergrößern beim Überfahren",
+                .hoverMagnificationScale: "Vergrößerungsfaktor",
+                .activePressEffect: "Verkleinern beim Klicken",
+                .activePressScale: "Klick-Faktor",
                 .animationDurationLabel: "Dauer der Slide-Animation",
                 .gridSizeChangeWarning: "Das Ändern der Rastergröße kann einige Symbole neu anordnen.",
                 .pageIndicatorHint: "Wirkt der Effekt gering, passe den Seitenindikator darunter an.",
@@ -806,6 +834,10 @@ final class LocalizationManager {
                 .showLabels: "Показывать подписи под значками",
                 .useLocalizedThirdPartyTitles: "Использовать локализованные названия",
                 .enableAnimations: "Включить анимацию перелистывания",
+                .hoverMagnification: "Увеличение при наведении",
+                .hoverMagnificationScale: "Коэффициент увеличения",
+                .activePressEffect: "Уменьшение при нажатии",
+                .activePressScale: "Коэффициент нажатия",
                 .animationDurationLabel: "Длительность анимации перелистывания",
                 .gridSizeChangeWarning: "Изменение размера сетки может изменить расположение некоторых значков.",
                 .pageIndicatorHint: "Если изменения едва заметны, настройте положение индикатора страниц ниже.",

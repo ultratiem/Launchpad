@@ -1259,6 +1259,10 @@ extension LaunchpadView {
                 labelFontSize: CGFloat(appStore.iconLabelFontSize),
                 shouldAllowHover: shouldAllowHover,
                 externalScale: isCenterCreatingTarget ? 1.2 : nil,
+                hoverMagnificationEnabled: appStore.enableHoverMagnification,
+                hoverMagnificationScale: CGFloat(appStore.hoverMagnificationScale),
+                activePressEffectEnabled: appStore.enableActivePressEffect,
+                activePressScale: CGFloat(appStore.activePressScale),
                 onTap: { if draggingItem == nil { handleItemTap(item) } }
             )
             .frame(height: appHeight)
@@ -1494,7 +1498,9 @@ extension LaunchpadView {
             if wheelLastDirection != direction { wheelAccumulatedSinceFlip = 0 }
             wheelLastDirection = direction
             wheelAccumulatedSinceFlip += abs(primaryDelta)
-            let threshold: CGFloat = 2.0 / CGFloat(appStore.scrollSensitivity / 0.15) // 根据灵敏度调整鼠标滚轮阈值
+            let baselineSensitivity = max(AppStore.defaultScrollSensitivity, 0.0001)
+            let relativeSensitivity = max(appStore.scrollSensitivity, 0.0001) / baselineSensitivity
+            let threshold: CGFloat = 2.0 / CGFloat(relativeSensitivity) // 根据灵敏度调整鼠标滚轮阈值
             let now = Date()
             if wheelAccumulatedSinceFlip >= threshold {
                 if let last = wheelLastFlipAt, now.timeIntervalSince(last) < wheelFlipCooldown { return }
@@ -1519,9 +1525,10 @@ extension LaunchpadView {
             accumulatedScrollX += delta
         case .ended, .cancelled:
             // 使灵敏度越大阈值越小，以符合直觉（与鼠标滚轮一致）
-            // 归一到默认值 0.15：threshold = pageWidth * (0.0225 / sensitivity)
-            // 当 sensitivity=0.15 时，阈值为 0.15*pageWidth；越大则更灵敏（阈值更小）
-            let threshold = pageWidth * (0.0225 / max(appStore.scrollSensitivity, 0.001))
+            // 归一到默认值：threshold = pageWidth * (baseline^2 / sensitivity)
+            // 当 sensitivity=baseline 时，阈值为 baseline*pageWidth；越大则更灵敏（阈值更小）
+            let baselineSensitivity = max(AppStore.defaultScrollSensitivity, 0.001)
+            let threshold = pageWidth * ((baselineSensitivity * baselineSensitivity) / max(appStore.scrollSensitivity, 0.001))
             if accumulatedScrollX <= -threshold {
                 navigateToNextPage()
             } else if accumulatedScrollX >= threshold {

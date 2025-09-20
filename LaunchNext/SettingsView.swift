@@ -826,6 +826,22 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
                         .labelsHidden()
                         .toggleStyle(.switch)
                 }
+
+                HStack {
+                    Text(appStore.localized(.hoverMagnification))
+                    Spacer()
+                    Toggle("", isOn: $appStore.enableHoverMagnification)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                }
+
+                HStack {
+                    Text(appStore.localized(.activePressEffect))
+                    Spacer()
+                    Toggle("", isOn: $appStore.enableActivePressEffect)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                }
             }
 
             Divider()
@@ -854,6 +870,44 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
                         Text(appStore.localized(.smaller)).font(.footnote)
                         Spacer()
                         Text(appStore.localized(.larger)).font(.footnote)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(appStore.localized(.hoverMagnificationScale))
+                        .font(.headline)
+                    Slider(value: $appStore.hoverMagnificationScale,
+                           in: AppStore.hoverMagnificationRange)
+                        .disabled(!appStore.enableHoverMagnification)
+                    HStack {
+                        Text(String(format: "%.2fx", AppStore.hoverMagnificationRange.lowerBound))
+                            .font(.footnote)
+                        Spacer()
+                        Text(String(format: "%.2fx", appStore.hoverMagnificationScale))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text(String(format: "%.2fx", AppStore.hoverMagnificationRange.upperBound))
+                            .font(.footnote)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(appStore.localized(.activePressScale))
+                        .font(.headline)
+                    Slider(value: $appStore.activePressScale,
+                           in: AppStore.activePressScaleRange)
+                        .disabled(!appStore.enableActivePressEffect)
+                    HStack {
+                        Text(String(format: "%.2fx", AppStore.activePressScaleRange.lowerBound))
+                            .font(.footnote)
+                        Spacer()
+                        Text(String(format: "%.2fx", appStore.activePressScale))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text(String(format: "%.2fx", AppStore.activePressScaleRange.upperBound))
+                            .font(.footnote)
                     }
                 }
 

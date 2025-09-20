@@ -1,8 +1,6 @@
 import SwiftUI
 import AppKit
 
-// Shared animations
-
 struct LaunchpadItemButton: View {
     let item: LaunchpadItem
     let iconSize: CGFloat
@@ -12,28 +10,28 @@ struct LaunchpadItemButton: View {
     let labelFontSize: CGFloat
     var shouldAllowHover: Bool = true
     var externalScale: CGFloat? = nil
+    var hoverMagnificationEnabled: Bool = false
+    var hoverMagnificationScale: CGFloat = 1.2
+    var activePressEffectEnabled: Bool = false
+    var activePressScale: CGFloat = 0.92
     let onTap: () -> Void
     let onDoubleClick: (() -> Void)?
-    
-    @State private var isHovered = false
+
     @State private var lastTapTime = Date.distantPast
-    @State private var forceRefreshTrigger: UUID = UUID()
     private let doubleTapThreshold: TimeInterval = 0.3
-    
-    private var effectiveScale: CGFloat {
-        // 关闭悬停放大效果，仅保留外部/选中触发的缩放
-        if let s = externalScale { return s }
-        return 1.0
-    }
-    
+
     init(item: LaunchpadItem,
          iconSize: CGFloat = 72,
          labelWidth: CGFloat = 80,
          isSelected: Bool = false,
          showLabel: Bool = true,
          labelFontSize: CGFloat = 11,
-          shouldAllowHover: Bool = true,
-          externalScale: CGFloat? = nil,
+         shouldAllowHover: Bool = true,
+         externalScale: CGFloat? = nil,
+         hoverMagnificationEnabled: Bool = false,
+         hoverMagnificationScale: CGFloat = 1.2,
+         activePressEffectEnabled: Bool = false,
+         activePressScale: CGFloat = 0.92,
          onTap: @escaping () -> Void,
          onDoubleClick: (() -> Void)? = nil) {
         self.item = item
@@ -44,85 +42,178 @@ struct LaunchpadItemButton: View {
         self.labelFontSize = labelFontSize
         self.shouldAllowHover = shouldAllowHover
         self.externalScale = externalScale
+        self.hoverMagnificationEnabled = hoverMagnificationEnabled
+        self.hoverMagnificationScale = hoverMagnificationScale
+        self.activePressEffectEnabled = activePressEffectEnabled
+        self.activePressScale = activePressScale
         self.onTap = onTap
         self.onDoubleClick = onDoubleClick
     }
 
     var body: some View {
         Button(action: handleTap) {
-            VStack(spacing: 8) {
-                ZStack {
-                    let renderedIcon: NSImage = {
-                        switch item {
-                        case .app(let app):
-                            // 尝试从缓存获取图标
-                            if let cachedIcon = AppCacheManager.shared.getCachedIcon(for: app.url.path), cachedIcon.size.width > 0, cachedIcon.size.height > 0 {
-                                return cachedIcon
-                            }
-                            // 使用自身图标或兜底到系统图标
-                            let base = app.icon
-                            if base.size.width > 0 && base.size.height > 0 {
-                                return base
-                            } else {
-                                return NSWorkspace.shared.icon(forFile: app.url.path)
-                            }
-                        case .folder(let folder):
-                            return folder.icon(of: iconSize)
-                        case .empty:
-                            return item.icon
-                        }
-                    }()
-                    let isFolderIcon: Bool = {
-                        if case .folder = item { return true } else { return false }
-                    }()
-                    
-                    if isFolderIcon {
-                        RoundedRectangle(cornerRadius: iconSize * 0.18)
-                            .foregroundStyle(Color.clear)
-                            .frame(width: iconSize * 0.8, height: iconSize * 0.8)
-                            .glassEffect(in: RoundedRectangle(cornerRadius: iconSize * 0.18))
-                            .shadow(color: .black.opacity(0.12), radius: 1, x: 0, y: 0.5)
-                    }
-                    
-                    Image(nsImage: renderedIcon)
-                        .resizable()
-                        .interpolation(.high)
-                        .antialiased(true)
-                        .frame(width: iconSize, height: iconSize)
-                        .id(item.id + "_" + forceRefreshTrigger.uuidString) // 使用组合ID强制刷新，确保文件夹图标能够正确更新
-                }
-                .scaleEffect(isSelected ? 1.2 : effectiveScale)
-                .animation(LNAnimations.springFast, value: isSelected)
-
-                if showLabel {
-                    Text(item.name)
-                        .font(.system(size: labelFontSize, weight: .medium))
-                        .lineLimit(2)
-                        .multilineTextAlignment(.center)
-                        .truncationMode(.tail)
-                        .frame(width: labelWidth)
-                        .foregroundStyle(.primary)
-                }
-            }
+            LaunchpadItemButtonContent(
+                item: item,
+                iconSize: iconSize,
+                labelWidth: labelWidth,
+                isSelected: isSelected,
+                showLabel: showLabel,
+                labelFontSize: labelFontSize,
+                shouldAllowHover: shouldAllowHover,
+                externalScale: externalScale,
+                hoverMagnificationEnabled: hoverMagnificationEnabled,
+                hoverMagnificationScale: hoverMagnificationScale
+            )
         }
-        .buttonStyle(.plain)
-        .padding(8)
-        // 关闭悬停时的放大反馈
-        .onHover { _ in }
+        .buttonStyle(PressFeedbackButtonStyle(
+            enabled: activePressEffectEnabled,
+            pressScale: activePressScale,
+            shouldAllowPressFeedback: shouldAllowHover
+        ))
     }
-    
+
     private func handleTap() {
         let now = Date()
         let timeSinceLastTap = now.timeIntervalSince(lastTapTime)
-        
+
         if timeSinceLastTap <= doubleTapThreshold, let doubleClick = onDoubleClick {
-            // 双击
             doubleClick()
         } else {
-            // 单击
             onTap()
         }
-        
+
         lastTapTime = now
+    }
+}
+
+private struct LaunchpadItemButtonContent: View {
+    let item: LaunchpadItem
+    let iconSize: CGFloat
+    let labelWidth: CGFloat
+    let isSelected: Bool
+    let showLabel: Bool
+    let labelFontSize: CGFloat
+    let shouldAllowHover: Bool
+    let externalScale: CGFloat?
+    let hoverMagnificationEnabled: Bool
+    let hoverMagnificationScale: CGFloat
+
+    @State private var isHovered = false
+    @State private var forceRefreshTrigger: UUID = UUID()
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                let renderedIcon: NSImage = {
+                    switch item {
+                    case .app(let app):
+                        if let cachedIcon = AppCacheManager.shared.getCachedIcon(for: app.url.path),
+                           cachedIcon.size.width > 0,
+                           cachedIcon.size.height > 0 {
+                            return cachedIcon
+                        }
+                        let base = app.icon
+                        if base.size.width > 0 && base.size.height > 0 {
+                            return base
+                        }
+                        return NSWorkspace.shared.icon(forFile: app.url.path)
+                    case .folder(let folder):
+                        return folder.icon(of: iconSize)
+                    case .empty:
+                        return item.icon
+                    }
+                }()
+                let isFolderIcon: Bool = {
+                    if case .folder = item { return true }
+                    return false
+                }()
+
+                if isFolderIcon {
+                    RoundedRectangle(cornerRadius: iconSize * 0.18)
+                        .foregroundStyle(Color.clear)
+                        .frame(width: iconSize * 0.8, height: iconSize * 0.8)
+                        .glassEffect(in: RoundedRectangle(cornerRadius: iconSize * 0.18))
+                        .shadow(color: .black.opacity(0.12), radius: 1, x: 0, y: 0.5)
+                }
+
+                Image(nsImage: renderedIcon)
+                    .resizable()
+                    .interpolation(.high)
+                    .antialiased(true)
+                    .frame(width: iconSize, height: iconSize)
+                    .id(item.id + "_" + forceRefreshTrigger.uuidString)
+            }
+            .scaleEffect(iconScale)
+            .animation(LNAnimations.springFast, value: isSelected)
+            .animation(LNAnimations.springFast, value: isHovered)
+
+            if showLabel {
+                Text(item.name)
+                    .font(.system(size: labelFontSize, weight: .medium))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .truncationMode(.tail)
+                    .frame(width: labelWidth)
+                    .foregroundStyle(.primary)
+            }
+        }
+        .padding(8)
+        .onHover { hovering in
+            guard shouldAllowHover else {
+                if isHovered { isHovered = false }
+                return
+            }
+            guard hoverMagnificationEnabled else {
+                if isHovered { isHovered = false }
+                return
+            }
+            if isHovered != hovering {
+                withAnimation(LNAnimations.springFast) {
+                    isHovered = hovering
+                }
+            }
+        }
+        .onChange(of: shouldAllowHover) { allow in
+            if !allow {
+                isHovered = false
+            }
+        }
+        .onChange(of: hoverMagnificationEnabled) { enabled in
+            if !enabled {
+                isHovered = false
+            }
+        }
+    }
+
+    private var iconScale: CGFloat {
+        if let externalScale {
+            return externalScale
+        }
+        if isSelected {
+            return 1.2
+        }
+        if hoverMagnificationEnabled && shouldAllowHover && isHovered {
+            return hoverMagnificationScale
+        }
+        return 1.0
+    }
+}
+
+private struct PressFeedbackButtonStyle: ButtonStyle {
+    var enabled: Bool
+    var pressScale: CGFloat
+    var shouldAllowPressFeedback: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(scale(for: configuration))
+            .animation(LNAnimations.springFast,
+                       value: configuration.isPressed && enabled && shouldAllowPressFeedback)
+    }
+
+    private func scale(for configuration: Configuration) -> CGFloat {
+        guard enabled, shouldAllowPressFeedback else { return 1.0 }
+        let clamped = max(min(pressScale, 1.0), 0.5)
+        return configuration.isPressed ? clamped : 1.0
     }
 }

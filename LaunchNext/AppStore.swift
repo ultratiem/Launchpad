@@ -65,6 +65,10 @@ final class AppStore: ObservableObject {
     private static let rememberPageKey = "rememberLastPage"
     private static let rememberedPageIndexKey = "rememberedPageIndex"
     private static let globalHotKeyKey = "globalHotKeyConfiguration"
+    private static let hoverMagnificationKey = "enableHoverMagnification"
+    private static let hoverMagnificationScaleKey = "hoverMagnificationScale"
+    private static let activePressEffectKey = "enableActivePressEffect"
+    private static let activePressScaleKey = "activePressScale"
 
     private static let minColumnsPerPage = 4
     private static let maxColumnsPerPage = 10
@@ -74,10 +78,15 @@ final class AppStore: ObservableObject {
     private static let maxColumnSpacing: Double = 50
     private static let minRowSpacing: Double = 6
     private static let maxRowSpacing: Double = 40
+    static let defaultScrollSensitivity: Double = 0.2
     static var gridColumnRange: ClosedRange<Int> { minColumnsPerPage...maxColumnsPerPage }
     static var gridRowRange: ClosedRange<Int> { minRowsPerPage...maxRowsPerPage }
     static var columnSpacingRange: ClosedRange<Double> { minColumnSpacing...maxColumnSpacing }
     static var rowSpacingRange: ClosedRange<Double> { minRowSpacing...maxRowSpacing }
+    static let hoverMagnificationRange: ClosedRange<Double> = 1.0...1.4
+    private static let defaultHoverMagnificationScale: Double = 1.2
+    static let activePressScaleRange: ClosedRange<Double> = 0.85...1.0
+    private static let defaultActivePressScale: Double = 0.92
 
     struct HotKeyConfiguration: Equatable {
         let keyCode: UInt16
@@ -292,6 +301,60 @@ final class AppStore: ObservableObject {
         didSet { UserDefaults.standard.set(enableAnimations, forKey: "enableAnimations") }
     }
 
+    @Published var enableHoverMagnification: Bool = {
+        if UserDefaults.standard.object(forKey: AppStore.hoverMagnificationKey) == nil { return false }
+        return UserDefaults.standard.bool(forKey: AppStore.hoverMagnificationKey)
+    }() {
+        didSet { UserDefaults.standard.set(enableHoverMagnification, forKey: Self.hoverMagnificationKey) }
+    }
+
+    @Published var hoverMagnificationScale: Double = {
+        let defaults = UserDefaults.standard
+        let stored = defaults.object(forKey: AppStore.hoverMagnificationScaleKey) as? Double
+        let initial = stored ?? AppStore.defaultHoverMagnificationScale
+        let clamped = min(max(initial, AppStore.hoverMagnificationRange.lowerBound), AppStore.hoverMagnificationRange.upperBound)
+        if stored == nil || stored != clamped {
+            defaults.set(clamped, forKey: AppStore.hoverMagnificationScaleKey)
+        }
+        return clamped
+    }() {
+        didSet {
+            let clamped = min(max(hoverMagnificationScale, Self.hoverMagnificationRange.lowerBound), Self.hoverMagnificationRange.upperBound)
+            if hoverMagnificationScale != clamped {
+                hoverMagnificationScale = clamped
+                return
+            }
+            UserDefaults.standard.set(hoverMagnificationScale, forKey: Self.hoverMagnificationScaleKey)
+        }
+    }
+
+    @Published var enableActivePressEffect: Bool = {
+        if UserDefaults.standard.object(forKey: AppStore.activePressEffectKey) == nil { return false }
+        return UserDefaults.standard.bool(forKey: AppStore.activePressEffectKey)
+    }() {
+        didSet { UserDefaults.standard.set(enableActivePressEffect, forKey: Self.activePressEffectKey) }
+    }
+
+    @Published var activePressScale: Double = {
+        let defaults = UserDefaults.standard
+        let stored = defaults.object(forKey: AppStore.activePressScaleKey) as? Double
+        let initial = stored ?? AppStore.defaultActivePressScale
+        let clamped = min(max(initial, AppStore.activePressScaleRange.lowerBound), AppStore.activePressScaleRange.upperBound)
+        if stored == nil || stored != clamped {
+            defaults.set(clamped, forKey: AppStore.activePressScaleKey)
+        }
+        return clamped
+    }() {
+        didSet {
+            let clamped = min(max(activePressScale, Self.activePressScaleRange.lowerBound), Self.activePressScaleRange.upperBound)
+            if activePressScale != clamped {
+                activePressScale = clamped
+                return
+            }
+            UserDefaults.standard.set(activePressScale, forKey: Self.activePressScaleKey)
+        }
+    }
+
     @Published var iconLabelFontSize: Double = {
         let stored = UserDefaults.standard.double(forKey: "iconLabelFontSize")
         return stored == 0 ? 11.0 : stored
@@ -455,7 +518,7 @@ final class AppStore: ObservableObject {
         let savedPageIndex = defaults.object(forKey: Self.rememberedPageIndexKey) as? Int
 
         let storedSensitivity = defaults.double(forKey: "scrollSensitivity")
-        self.scrollSensitivity = storedSensitivity == 0 ? 0.15 : storedSensitivity
+        self.scrollSensitivity = storedSensitivity == 0 ? Self.defaultScrollSensitivity : storedSensitivity
 
         let storedColumns = defaults.object(forKey: Self.gridColumnsKey) as? Int ?? 7
         let clampedColumns = Self.clampColumns(storedColumns)

@@ -293,6 +293,10 @@ extension FolderView {
             showLabel: appStore.showLabels,
             labelFontSize: CGFloat(appStore.iconLabelFontSize),
             shouldAllowHover: draggingApp == nil,
+            hoverMagnificationEnabled: appStore.enableHoverMagnification,
+            hoverMagnificationScale: CGFloat(appStore.hoverMagnificationScale),
+            activePressEffectEnabled: appStore.enableActivePressEffect,
+            activePressScale: CGFloat(appStore.activePressScale),
             onTap: { 
                 // 在编辑状态下不启动应用
                 if draggingApp == nil && !isEditingName { 
