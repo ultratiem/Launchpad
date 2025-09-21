@@ -119,6 +119,9 @@ struct LaunchpadView: View {
     @State private var wheelLastFlipAt: Date? = nil
     private let wheelFlipCooldown: TimeInterval = 0.15
     @State private var dragPointerOffset: CGPoint = .zero
+    @State private var blankDragStartPoint: CGPoint? = nil
+    @State private var blankDragShouldIgnore: Bool = false
+    @State private var blankDragConsumed: Bool = false
     @State private var fpsMonitor: FPSMonitor?
     @State private var fpsValue: Double = 0
     @State private var frameTimeMilliseconds: Double = 0
@@ -138,8 +141,9 @@ struct LaunchpadView: View {
     }
 
     var filteredItems: [LaunchpadItem] {
-        guard !appStore.searchText.isEmpty else { return appStore.items }
-        
+        let query = appStore.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return appStore.items }
+
         var result: [LaunchpadItem] = []
         var searchedApps = Set<String>() // 用于去重，避免重复显示同一个应用
         
@@ -147,19 +151,19 @@ struct LaunchpadView: View {
         for item in appStore.items {
             switch item {
             case .app(let app):
-                if app.name.localizedCaseInsensitiveContains(appStore.searchText) {
+                if app.name.localizedCaseInsensitiveContains(query) {
                     result.append(.app(app))
                     searchedApps.insert(app.url.path)
                 }
             case .folder(let folder):
                 // 检查文件夹名称
-                if folder.name.localizedCaseInsensitiveContains(appStore.searchText) {
+                if folder.name.localizedCaseInsensitiveContains(query) {
                     result.append(.folder(folder))
                 }
                 
                 // 检查文件夹内的应用，如果匹配则提取出来直接显示
                 let matchingApps = folder.apps.filter { app in
-                    app.name.localizedCaseInsensitiveContains(appStore.searchText)
+                    app.name.localizedCaseInsensitiveContains(query)
                 }
                 for app in matchingApps {
                     if !searchedApps.contains(app.url.path) {
@@ -260,7 +264,7 @@ struct LaunchpadView: View {
                     )
                     .frame(maxWidth: 480)
                     .disabled(isFolderOpen)
-                    .onChange(of: appStore.searchText) {
+                    .onChange(of: appStore.searchQuery) {
                         guard !isFolderOpen else { return }
                         // 避免在视图更新周期内直接发布变化，推迟到下一循环
                         let maxPageIndex = max(pages.count - 1, 0)
@@ -365,7 +369,7 @@ struct LaunchpadView: View {
                                 .foregroundStyle(.secondary)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else if filteredItems.isEmpty && !appStore.searchText.isEmpty {
+                    } else if filteredItems.isEmpty && !appStore.searchQuery.isEmpty {
                         VStack(spacing: 20) {
                             Image(systemName: "magnifyingglass")
                                 .font(.largeTitle)
@@ -430,17 +434,11 @@ struct LaunchpadView: View {
                         .coordinateSpace(name: "grid")
                         // 让整个网格容器都可命中，以捕获空白区域的点击
                         .contentShape(Rectangle())
-                        .gesture(
-                            DragGesture(minimumDistance: 0, coordinateSpace: .named("grid"))
-                                .onEnded { value in
-                                    closeIfTappedOnEmptyOrGap(at: value.location,
-                                                              geoSize: geo.size,
-                                                              columnWidth: columnWidth,
-                                                              appHeight: appHeight,
-                                                              iconSize: iconSize)
-                                },
-                            including: .subviews
-                        )
+                        .simultaneousGesture(blankDragGesture(geoSize: geo.size,
+                                                               columnWidth: columnWidth,
+                                                               appHeight: appHeight,
+                                                               iconSize: iconSize),
+                                             including: .gesture)
                         .onTapGesture {
                             // 失焦输入
                             NSApp.keyWindow?.makeFirstResponder(nil)
@@ -486,11 +484,11 @@ struct LaunchpadView: View {
                                 captureGridGeometry(geo, columnWidth: columnWidth, appHeight: appHeight, iconSize: iconSize)
                             }
                         }
-                        .task {
-                            await MainActor.run {
-                                captureGridGeometry(geo, columnWidth: columnWidth, appHeight: appHeight, iconSize: iconSize)
-                            }
-                        }
+        .task {
+            await MainActor.run {
+                captureGridGeometry(geo, columnWidth: columnWidth, appHeight: appHeight, iconSize: iconSize)
+            }
+        }
                     }
                 }
                 
@@ -569,10 +567,28 @@ struct LaunchpadView: View {
 
                 if let openFolder = appStore.openFolder {
                     GeometryReader { proxy in
-                        let targetWidth = proxy.size.width * 0.7
-                        let targetHeight = proxy.size.height * 0.7
+                        let widthFactor: CGFloat = appStore.isFullscreenMode ? 0.7 : CGFloat(appStore.folderPopoverWidthFactor)
+                        let heightFactor: CGFloat = appStore.isFullscreenMode ? 0.7 : CGFloat(appStore.folderPopoverHeightFactor)
+                        let minWidth: CGFloat = appStore.isFullscreenMode ? 520 : 560
+                        let minHeight: CGFloat = 420
+                        let rawHorizontalMargin: CGFloat = appStore.isFullscreenMode ? max(proxy.size.width * 0.15, 120) : 32
+                        let rawVerticalMargin: CGFloat = appStore.isFullscreenMode ? max(proxy.size.height * 0.15, 120) : 32
+                        let horizontalMargin = min(rawHorizontalMargin, proxy.size.width / 2)
+                        let verticalMargin = min(rawVerticalMargin, proxy.size.height / 2)
+
+                        let proposedWidth = proxy.size.width * widthFactor
+                        let proposedHeight = proxy.size.height * heightFactor
+
+                        let maxAllowedWidth = max(proxy.size.width - horizontalMargin * 2, 0)
+                        let maxAllowedHeight = max(proxy.size.height - verticalMargin * 2, 0)
+
+                        let minAllowedWidth = min(minWidth, maxAllowedWidth)
+                        let minAllowedHeight = min(minHeight, maxAllowedHeight)
+
+                        let clampedWidth = max(min(proposedWidth, maxAllowedWidth), minAllowedWidth)
+                        let clampedHeight = max(min(proposedHeight, maxAllowedHeight), minAllowedHeight)
                         let folderId = openFolder.id
-                        
+
                         // 使用计算属性来确保绑定能够正确响应folderUpdateTrigger的变化
                         let folderBinding = Binding<FolderInfo>(
                             get: {
@@ -615,11 +631,11 @@ struct LaunchpadView: View {
                                 launchApp(app)
                             }
                         )
-                        .frame(width: targetWidth, height: targetHeight)
+                        .frame(width: clampedWidth, height: clampedHeight)
                         .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
                         .id("folder_\(folderId)") // 使用稳定ID，避免每次更新导致视图重建
                         .transition(LNAnimations.folderOpenTransition)
-                        
+
                     }
                 }
 
@@ -952,6 +968,169 @@ extension LaunchpadView {
         fpsMonitor = nil
         fpsValue = 0
         frameTimeMilliseconds = 0
+    }
+}
+
+// MARK: - Blank area drag to flip pages
+extension LaunchpadView {
+    private func blankDragGesture(geoSize: CGSize,
+                                  columnWidth: CGFloat,
+                                  appHeight: CGFloat,
+                                  iconSize: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .named("grid"))
+            .onChanged { value in
+                handleBlankAreaDragChange(value,
+                                          geoSize: geoSize,
+                                          columnWidth: columnWidth,
+                                          appHeight: appHeight,
+                                          iconSize: iconSize)
+            }
+            .onEnded { value in
+                handleBlankAreaDragEnd(value,
+                                       geoSize: geoSize,
+                                       columnWidth: columnWidth,
+                                       appHeight: appHeight,
+                                       iconSize: iconSize)
+            }
+    }
+
+    private func handleBlankAreaDragChange(_ value: DragGesture.Value,
+                                           geoSize: CGSize,
+                                           columnWidth: CGFloat,
+                                           appHeight: CGFloat,
+                                           iconSize: CGFloat) {
+        guard draggingItem == nil, !isFolderOpen else { return }
+        if blankDragConsumed { return }
+
+        if blankDragStartPoint == nil {
+            blankDragStartPoint = value.startLocation
+            blankDragShouldIgnore = isPointOnInteractiveItem(value.startLocation,
+                                                             geoSize: geoSize,
+                                                             columnWidth: columnWidth,
+                                                             appHeight: appHeight,
+                                                             iconSize: iconSize)
+            blankDragConsumed = false
+        // let ignoreReason = blankDragShouldIgnore ? "hit item" : "blank"
+        // print("[Launchpad] blank drag began at \(value.startLocation) -> \(ignoreReason)")
+        }
+
+        guard !blankDragShouldIgnore, let start = blankDragStartPoint else { return }
+
+        let translationX = value.location.x - start.x
+        let threshold = blankDragThreshold(for: geoSize.width)
+        // print("[Launchpad] blank drag change translation=\(translationX), threshold=\(threshold)")
+
+        if translationX <= -threshold {
+            navigateToNextPage()
+            blankDragStartPoint = value.location
+            blankDragConsumed = true
+            // print("[Launchpad] blank drag translation \(translationX) <= -\(threshold), flipped to next page")
+        } else if translationX >= threshold {
+            navigateToPreviousPage()
+            blankDragStartPoint = value.location
+            blankDragConsumed = true
+            // print("[Launchpad] blank drag translation \(translationX) >= \(threshold), flipped to previous page")
+        }
+    }
+
+    private func handleBlankAreaDragEnd(_ value: DragGesture.Value,
+                                         geoSize: CGSize,
+                                         columnWidth: CGFloat,
+                                         appHeight: CGFloat,
+                                         iconSize: CGFloat) {
+        defer { resetBlankDragState() }
+
+        guard draggingItem == nil, !isFolderOpen else { return }
+
+        if blankDragShouldIgnore { return }
+
+        guard blankDragStartPoint != nil else {
+            closeIfTappedOnEmptyOrGap(at: value.location,
+                                      geoSize: geoSize,
+                                      columnWidth: columnWidth,
+                                      appHeight: appHeight,
+                                      iconSize: iconSize)
+            return
+        }
+
+        if blankDragConsumed {
+            // print("[Launchpad] blank drag already consumed")
+            return
+        }
+
+        // Drag距离不够视为点击空白
+        let travel = hypot(value.translation.width, value.translation.height)
+        if travel <= 12 {
+            closeIfTappedOnEmptyOrGap(at: value.location,
+                                      geoSize: geoSize,
+                                      columnWidth: columnWidth,
+                                      appHeight: appHeight,
+                                      iconSize: iconSize)
+            // print("[Launchpad] blank drag travel \(travel) treated as tap")
+        } else {
+            // print("[Launchpad] blank drag end travel=\(travel) no action")
+        }
+    }
+
+    private func blankDragThreshold(for width: CGFloat) -> CGFloat {
+        max(width * 0.08, 60)
+    }
+
+    private func resetBlankDragState() {
+        blankDragStartPoint = nil
+        blankDragShouldIgnore = false
+        blankDragConsumed = false
+    }
+
+    private func isPointOnInteractiveItem(_ point: CGPoint,
+                                          geoSize: CGSize,
+                                          columnWidth: CGFloat,
+                                          appHeight: CGFloat,
+                                          iconSize: CGFloat) -> Bool {
+        guard let index = indexAt(point: point,
+                                  in: geoSize,
+                                  pageIndex: appStore.currentPage,
+                                  columnWidth: columnWidth,
+                                  appHeight: appHeight) else { return false }
+
+        guard currentItems.indices.contains(index) else { return false }
+        if case .empty = currentItems[index] { return false }
+
+        let rect = itemInteractiveRect(for: index,
+                                       geoSize: geoSize,
+                                       columnWidth: columnWidth,
+                                       appHeight: appHeight,
+                                       iconSize: iconSize)
+
+        let horizontalPadding: CGFloat = 8
+        let verticalPadding: CGFloat = 8
+        let hasLabel = appStore.showLabels
+        let iconLabelSpacing: CGFloat = hasLabel ? 8 : 0
+
+        let iconRect = CGRect(
+            x: rect.midX - iconSize / 2 + 16,
+            y: rect.minY + verticalPadding + 16,
+            width: iconSize - 32,
+            height: iconSize - 32
+        ).standardized
+
+        var labelRect = CGRect.null
+        if hasLabel {
+            let labelTop = iconRect.maxY + iconLabelSpacing
+            let labelBottom = rect.maxY - verticalPadding
+            let labelHeight = max(0, labelBottom - labelTop)
+            labelRect = CGRect(
+                x: rect.minX + horizontalPadding + 12,
+                y: labelTop,
+                width: rect.width - horizontalPadding * 2 - 24,
+                height: labelHeight
+            ).standardized
+        }
+
+        let isIconHit = iconRect.contains(point)
+        let isLabelHit = labelRect.contains(point)
+        // print("[Launchpad] hit-test at \(point) -> iconRect=\(iconRect), labelRect=\(labelRect), iconHit=\(isIconHit), labelHit=\(isLabelHit)")
+        return isIconHit || isLabelHit
     }
 }
 

@@ -1,10 +1,12 @@
 # LaunchNext
 
-**Idiomas**: [English](../README.md) | [中文](README.zh.md) | [日本語](README.ja.md) | [Français](README.fr.md) | [Español](README.es.md) | [Deutsch](README.de.md) | [Русский](README.ru.md)
+**Idiomas**: [English](../README.md) | [中文](README.zh.md) | [日本語](README.ja.md) | [Français](README.fr.md) | [Español](README.es.md) | [Deutsch](README.de.md) | [Русский](README.ru.md) | [हिन्दी](README.hi.md)
 
 ## 📥 Descargar
 
 **[Descargar aquí](https://github.com/RoversX/LaunchNext/releases/latest)** - Obtén la última versión
+
+⭐ ¡Considera dar una estrella a [LaunchNext](https://github.com/RoversX/LaunchNext) y especialmente al proyecto original [LaunchNow](https://github.com/ggkevinnnn/LaunchNow)!
 
 | | |
 |:---:|:---:|

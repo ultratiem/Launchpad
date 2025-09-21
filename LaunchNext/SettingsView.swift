@@ -696,6 +696,18 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
             }
 
             VStack(alignment: .leading, spacing: 12) {
+                Text(appStore.localized(.appearanceModeTitle))
+                    .font(.headline)
+                Picker(appStore.localized(.appearanceModeTitle), selection: $appStore.appearancePreference) {
+                    ForEach(AppearancePreference.allCases) { preference in
+                        Text(appStore.localized(preference.localizationKey)).tag(preference)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
                 Text(appStore.localized(.customIconTitle))
                     .font(.headline)
                 HStack(spacing: 16) {
@@ -872,6 +884,53 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
                         Text(appStore.localized(.larger)).font(.footnote)
                     }
                 }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(appStore.localized(.folderWindowWidth))
+                            .font(.headline)
+                        Spacer()
+                        Text(String(format: "%.0f%%", appStore.folderPopoverWidthFactor * 100))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(value: $appStore.folderPopoverWidthFactor,
+                           in: AppStore.folderPopoverWidthRange)
+                        .disabled(appStore.isFullscreenMode)
+                    HStack {
+                        Text(String(format: "%.0f%%", AppStore.folderPopoverWidthRange.lowerBound * 100))
+                            .font(.footnote)
+                        Spacer()
+                        Text(String(format: "%.0f%%", AppStore.folderPopoverWidthRange.upperBound * 100))
+                            .font(.footnote)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(appStore.localized(.folderWindowHeight))
+                            .font(.headline)
+                        Spacer()
+                        Text(String(format: "%.0f%%", appStore.folderPopoverHeightFactor * 100))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(value: $appStore.folderPopoverHeightFactor,
+                           in: AppStore.folderPopoverHeightRange)
+                        .disabled(appStore.isFullscreenMode)
+                    HStack {
+                        Text(String(format: "%.0f%%", AppStore.folderPopoverHeightRange.lowerBound * 100))
+                            .font(.footnote)
+                        Spacer()
+                        Text(String(format: "%.0f%%", AppStore.folderPopoverHeightRange.upperBound * 100))
+                            .font(.footnote)
+                    }
+                }
+
+                Text(appStore.localized(.folderWindowSizeHint))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(appStore.localized(.hoverMagnificationScale))
@@ -1281,6 +1340,18 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
                 }
                 Spacer()
             }
+
+#if DEBUG
+            HStack(spacing: 12) {
+                Button("Simulate Update Available") {
+                    appStore.simulateUpdateAvailable()
+                }
+                Button("Simulate Update Failure") {
+                    appStore.simulateUpdateFailure()
+                }
+            }
+            .font(.footnote)
+#endif
 
             // 自动检查更新开关
             Toggle(appStore.localized(.autoCheckForUpdates), isOn: $appStore.autoCheckForUpdates)

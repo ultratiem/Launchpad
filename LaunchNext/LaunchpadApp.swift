@@ -43,11 +43,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
     func applicationDidFinishLaunching(_ notification: Notification) {
         Self.shared = self
         appStore.syncGlobalHotKeyRegistration()
-        
+
         setupWindow()
         appStore.performInitialScanIfNeeded()
         appStore.startAutoRescan()
-        
+
+        bindAppearancePreference()
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.applyAppearancePreference(self.appStore.appearancePreference)
+        }
+
         if appStore.isFullscreenMode { updateWindowMode(isFullscreen: true) }
     }
 
@@ -150,6 +156,23 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
         showWindow()
 
         // 背景点击关闭逻辑改为 SwiftUI 内部实现，避免与输入控件冲突
+    }
+
+    private func bindAppearancePreference() {
+        appStore.$appearancePreference
+            .receive(on: RunLoop.main)
+            .sink { [weak self] preference in
+                DispatchQueue.main.async {
+                    self?.applyAppearancePreference(preference)
+                }
+            }
+            .store(in: &cancellables)
+    }
+
+    private func applyAppearancePreference(_ preference: AppearancePreference) {
+        let appearance = preference.nsAppearance.flatMap { NSAppearance(named: $0) }
+        window?.appearance = appearance
+        NSApp.appearance = appearance
     }
     
     func showWindow() {

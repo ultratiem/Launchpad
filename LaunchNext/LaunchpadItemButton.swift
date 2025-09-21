@@ -150,7 +150,7 @@ private struct LaunchpadItemButtonContent: View {
             if showLabel {
                 Text(item.name)
                     .font(.system(size: labelFontSize, weight: .medium))
-                    .lineLimit(2)
+                    .lineLimit(1)
                     .multilineTextAlignment(.center)
                     .truncationMode(.tail)
                     .frame(width: labelWidth)

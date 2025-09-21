@@ -9,6 +9,7 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     case spanish = "es"
     case german = "de"
     case russian = "ru"
+    case hindi = "hi"
 
     var id: String { rawValue }
 
@@ -21,6 +22,7 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         if lower.hasPrefix("es") { return .spanish }
         if lower.hasPrefix("de") { return .german }
         if lower.hasPrefix("ru") { return .russian }
+        if lower.hasPrefix("hi") { return .hindi }
         return .english
     }
 }
@@ -77,6 +79,10 @@ enum LocalizationKey: String {
     case cancel
     case quit
     case languagePickerTitle
+    case appearanceModeTitle
+    case appearanceModeFollowSystem
+    case appearanceModeLight
+    case appearanceModeDark
     case versionPrefix
     case settingsSectionPerformance
     case settingsSectionTitles
@@ -111,6 +117,9 @@ enum LocalizationKey: String {
     case customIconHint
     case customIconError
     case pageIndicatorOffsetLabel
+    case folderWindowWidth
+    case folderWindowHeight
+    case folderWindowSizeHint
     case languageNameSystem
     case languageNameEnglish
     case languageNameChinese
@@ -119,6 +128,7 @@ enum LocalizationKey: String {
     case languageNameSpanish
     case languageNameGerman
     case languageNameRussian
+    case languageNameHindi
     case folderNamePlaceholder
     case chooseButton
     case exportPanelMessage
@@ -176,6 +186,9 @@ final class LocalizationManager {
                 .customIconHint: "PNG/ICNS files at 512×512 work best. Changes apply instantly.",
                 .customIconError: "Could not load the selected image.",
                 .pageIndicatorOffsetLabel: "Page indicator spacing",
+                .folderWindowWidth: "Folder window width",
+                .folderWindowHeight: "Folder window height",
+                .folderWindowSizeHint: "Applies to windowed mode only; classic fullscreen uses a fixed layout.",
                 .appTitle: "LaunchNext",
                 .modifiedFrom: "Modified from LaunchNow version 1.3.1",
                 .backgroundHint: "Automatically run on background: add LaunchNext to dock or use keyboard shortcuts to open the application window",
@@ -224,6 +237,10 @@ final class LocalizationManager {
                 .cancel: "Cancel",
                 .quit: "Quit",
                 .languagePickerTitle: "Language",
+                .appearanceModeTitle: "Appearance",
+                .appearanceModeFollowSystem: "Follow system",
+                .appearanceModeLight: "Light",
+                .appearanceModeDark: "Dark",
                 .versionPrefix: "v",
                 .languageNameSystem: "Follow System",
                 .languageNameEnglish: "英语",
@@ -233,6 +250,7 @@ final class LocalizationManager {
                 .languageNameSpanish: "西班牙语",
                 .languageNameGerman: "德语",
                 .languageNameRussian: "俄语",
+                .languageNameHindi: "Hindi",
                 .folderNamePlaceholder: "Folder Name",
                 .viewOnGitHub: "Open project link",
                 .chooseButton: "Choose",
@@ -331,6 +349,13 @@ final class LocalizationManager {
                 .cancel: "取消",
                 .quit: "退出",
                 .languagePickerTitle: "语言",
+                .appearanceModeTitle: "外观模式",
+                .appearanceModeFollowSystem: "跟随系统",
+                .appearanceModeLight: "浅色",
+                .appearanceModeDark: "暗色",
+                .folderWindowWidth: "文件夹窗口宽度",
+                .folderWindowHeight: "文件夹窗口高度",
+                .folderWindowSizeHint: "仅在非经典模式下生效；经典全屏使用固定布局。",
                 .versionPrefix: "版本 ",
                 .languageNameSystem: "跟随系统",
                 .languageNameEnglish: "英語",
@@ -340,6 +365,7 @@ final class LocalizationManager {
                 .languageNameSpanish: "スペイン語",
                 .languageNameGerman: "ドイツ語",
                 .languageNameRussian: "ロシア語",
+                .languageNameHindi: "ヒンディー語",
                 .folderNamePlaceholder: "文件夹名称",
                 .viewOnGitHub: "打开项目链接",
                 .chooseButton: "选择",
@@ -438,6 +464,13 @@ final class LocalizationManager {
                 .cancel: "キャンセル",
                 .quit: "終了",
                 .languagePickerTitle: "言語",
+                .appearanceModeTitle: "外観モード",
+                .appearanceModeFollowSystem: "システムに合わせる",
+                .appearanceModeLight: "ライト",
+                .appearanceModeDark: "ダーク",
+                .folderWindowWidth: "フォルダーウィンドウの幅",
+                .folderWindowHeight: "フォルダーウィンドウの高さ",
+                .folderWindowSizeHint: "ウィンドウモードでのみ有効。クラシック全画面では固定サイズです。",
                 .versionPrefix: "v",
                 .languageNameSystem: "システムに従う",
                 .languageNameEnglish: "Anglais",
@@ -447,6 +480,7 @@ final class LocalizationManager {
                 .languageNameSpanish: "Espagnol",
                 .languageNameGerman: "Allemand",
                 .languageNameRussian: "Russe",
+                .languageNameHindi: "Hindi",
                 .folderNamePlaceholder: "フォルダ名",
                 .viewOnGitHub: "プロジェクトリンクを開く",
                 .chooseButton: "選択",
@@ -545,6 +579,13 @@ final class LocalizationManager {
                 .cancel: "Annuler",
                 .quit: "Quitter",
                 .languagePickerTitle: "Langue",
+                .appearanceModeTitle: "Apparence",
+                .appearanceModeFollowSystem: "Suivre le système",
+                .appearanceModeLight: "Clair",
+                .appearanceModeDark: "Sombre",
+                .folderWindowWidth: "Largeur de la fenêtre de dossier",
+                .folderWindowHeight: "Hauteur de la fenêtre de dossier",
+                .folderWindowSizeHint: "S’applique uniquement en mode fenêtre ; le plein écran classique utilise une taille fixe.",
                 .versionPrefix: "v",
                 .languageNameSystem: "Suivre le système",
                 .languageNameEnglish: "English",
@@ -554,6 +595,7 @@ final class LocalizationManager {
                 .languageNameSpanish: "Español",
                 .languageNameGerman: "Deutsch",
                 .languageNameRussian: "Русский",
+                .languageNameHindi: "Hindi",
                 .folderNamePlaceholder: "Nom du dossier",
                 .viewOnGitHub: "Ouvrir le lien du projet",
                 .chooseButton: "Choisir",
@@ -652,6 +694,13 @@ final class LocalizationManager {
                 .cancel: "Cancelar",
                 .quit: "Salir",
                 .languagePickerTitle: "Idioma",
+                .appearanceModeTitle: "Apariencia",
+                .appearanceModeFollowSystem: "Seguir al sistema",
+                .appearanceModeLight: "Claro",
+                .appearanceModeDark: "Oscuro",
+                .folderWindowWidth: "Ancho de la ventana de carpetas",
+                .folderWindowHeight: "Alto de la ventana de carpetas",
+                .folderWindowSizeHint: "Solo se aplica en modo ventana; el modo clásico a pantalla completa usa un tamaño fijo.",
                 .versionPrefix: "v",
                 .languageNameSystem: "Seguir sistema",
                 .languageNameEnglish: "English",
@@ -759,6 +808,13 @@ final class LocalizationManager {
                 .cancel: "Abbrechen",
                 .quit: "Beenden",
                 .languagePickerTitle: "Sprache",
+                .appearanceModeTitle: "Darstellung",
+                .appearanceModeFollowSystem: "System folgen",
+                .appearanceModeLight: "Hell",
+                .appearanceModeDark: "Dunkel",
+                .folderWindowWidth: "Ordnerfenster-Breite",
+                .folderWindowHeight: "Ordnerfenster-Höhe",
+                .folderWindowSizeHint: "Gilt nur im Fenstermodus; der klassische Vollbildmodus nutzt eine feste Größe.",
                 .versionPrefix: "v",
                 .languageNameSystem: "Systemsprache",
                 .languageNameEnglish: "Englisch",
@@ -768,6 +824,7 @@ final class LocalizationManager {
                 .languageNameSpanish: "Spanisch",
                 .languageNameGerman: "Deutsch",
                 .languageNameRussian: "Russisch",
+                .languageNameHindi: "Hindi",
                 .folderNamePlaceholder: "Ordnername",
                 .viewOnGitHub: "Projektlink öffnen",
                 .chooseButton: "Auswählen",
@@ -866,6 +923,13 @@ final class LocalizationManager {
                 .cancel: "Отмена",
                 .quit: "Выйти",
                 .languagePickerTitle: "Язык",
+                .appearanceModeTitle: "Оформление",
+                .appearanceModeFollowSystem: "Как в системе",
+                .appearanceModeLight: "Светлая",
+                .appearanceModeDark: "Тёмная",
+                .folderWindowWidth: "Ширина окна папки",
+                .folderWindowHeight: "Высота окна папки",
+                .folderWindowSizeHint: "Работает только в оконном режиме; классический полноэкранный режим использует фиксированный размер.",
                 .versionPrefix: "v",
                 .languageNameSystem: "Следовать системе",
                 .languageNameEnglish: "Английский",
@@ -875,6 +939,7 @@ final class LocalizationManager {
                 .languageNameSpanish: "Испанский",
                 .languageNameGerman: "Немецкий",
                 .languageNameRussian: "Русский",
+                .languageNameHindi: "Хинди",
                 .folderNamePlaceholder: "Название папки",
                 .viewOnGitHub: "Открыть ссылку проекта",
                 .chooseButton: "Выбрать",
@@ -992,6 +1057,134 @@ final class LocalizationManager {
             .performancePlaceholderSubtitle: "Скоро здесь появятся показатели эффективности."
         ]) { _, new in new }
 
+        var hindiDictionary = builder[.english] ?? [:]
+        hindiDictionary[.languagePickerTitle] = "भाषा"
+        hindiDictionary[.languageNameSystem] = "सिस्टम का अनुसरण करें"
+        hindiDictionary[.languageNameEnglish] = "English"
+        hindiDictionary[.languageNameChinese] = "中文"
+        hindiDictionary[.languageNameJapanese] = "日本語"
+        hindiDictionary[.languageNameFrench] = "Français"
+        hindiDictionary[.languageNameSpanish] = "Español"
+        hindiDictionary[.languageNameGerman] = "Deutsch"
+        hindiDictionary[.languageNameRussian] = "Русский"
+        hindiDictionary[.languageNameHindi] = "हिन्दी"
+
+        hindiDictionary.merge([
+            .noAppsFound: "कोई ऐप नहीं मिला",
+            .searchPlaceholder: "खोजें",
+            .renameSearchPlaceholder: "ऐप खोजें",
+            .customTitlePlaceholder: "कस्टम नाम दर्ज करें",
+            .customTitleHint: "यहाँ ऐप का नाम बदलें; कस्टम नाम आयात या भाषा बदलने पर भी बने रहेंगे।",
+            .customTitleDefaultFormat: "डिफ़ॉल्ट: %@",
+            .customTitleReset: "डिफ़ॉल्ट बहाल करें",
+            .customTitleAddButton: "ऐप जोड़ें",
+            .customTitleEmptyTitle: "अभी कोई कस्टम नाम नहीं",
+            .customTitleEmptySubtitle: "ऐप चुनें और नया नाम दें; आयात या भाषा बदलने पर भी ये सुरक्षित रहेंगे।",
+            .customTitleNoResults: "कोई मेल नहीं मिला",
+            .customTitlePickerMessage: "जिस ऐप का नाम बदलना चाहते हैं उसे चुनें।",
+            .customTitleEdit: "संपादित करें",
+            .customTitleSave: "सहेजें",
+            .customTitleCancel: "रद्द करें",
+            .customTitleDelete: "हटाएँ",
+            .loadingApplications: "ऐप लोड हो रहे हैं…",
+            .showFPSOverlay: "FPS दिखाएँ",
+            .showFPSOverlayDisclaimer: "अनुमानित मान; वास्तविक फ्रेम दर से भिन्न हो सकता है।",
+            .customIconTitle: "ऐप आइकन",
+            .customIconChoose: "चुनें…",
+            .customIconReset: "डिफ़ॉल्ट आइकन बहाल करें",
+            .customIconHint: "512×512 PNG/ICNS फ़ाइल सर्वोत्तम है। बदलाव तुरंत लागू होंगे।",
+            .customIconError: "चयनित चित्र लोड नहीं हो सका।",
+            .pageIndicatorOffsetLabel: "पेज संकेतक अंतर",
+            .appTitle: "LaunchNext",
+            .modifiedFrom: "LaunchNow संस्करण 1.3.1 के आधार पर संशोधित",
+            .backgroundHint: "पृष्ठभूमि में चलाने के लिए LaunchNext को Dock में रखें या शॉर्टकट से विंडो खोलें",
+            .classicMode: "क्लासिक Launchpad (पूर्ण स्क्रीन)",
+            .iconSize: "आइकन आकार",
+            .iconsPerRow: "प्रति पंक्ति आइकन",
+            .rowsPerPage: "प्रति पृष्ठ पंक्तियाँ",
+            .iconHorizontalSpacing: "क्षैतिज दूरी",
+            .iconVerticalSpacing: "ऊर्ध्वाधर दूरी",
+            .labelFontSize: "लेबल फ़ॉन्ट आकार",
+            .smaller: "छोटा",
+            .larger: "बड़ा",
+            .predictDrop: "ड्रॉप स्थान का अनुमान",
+            .showLabels: "आइकन के नीचे नाम दिखाएँ",
+            .useLocalizedThirdPartyTitles: "लोकलाइज़्ड ऐप नाम उपयोग करें",
+            .enableAnimations: "स्लाइड एनीमेशन सक्षम करें",
+            .hoverMagnification: "हॉवर बढ़ोतरी",
+            .hoverMagnificationScale: "हॉवर स्केल",
+            .activePressEffect: "दबाने पर प्रभाव",
+            .activePressScale: "दबाव स्केल",
+            .animationDurationLabel: "स्लाइड एनीमेशन अवधि",
+            .gridSizeChangeWarning: "ग्रिड आकार बदलने पर कुछ आइकन स्थान बदल सकते हैं।",
+            .pageIndicatorHint: "यदि बदलाव कम लगे तो पेज संकेतक का अंतर समायोजित करें।",
+            .rememberPageTitle: "अंतिम खुला पृष्ठ याद रखें",
+            .globalShortcutTitle: "वैश्विक शॉर्टकट",
+            .shortcutSetButton: "शॉर्टकट सेट करें",
+            .shortcutSaveButton: "सहेजें",
+            .shortcutClearButton: "साफ़ करें",
+            .shortcutNotSet: "सेट नहीं",
+            .shortcutListening: "कुंजी प्रतीक्षा…",
+            .shortcutCapturePrompt: "वांछित संयोजन दबाएँ। Esc से रद्द करें।",
+            .shortcutNoModifierWarning: "बिना मॉडिफ़ायर अन्य ऐप्स से टकराव हो सकता है।",
+            .scrollSensitivity: "स्क्रॉल संवेदनशीलता",
+            .low: "कम",
+            .high: "उच्च",
+            .importSystem: "सिस्टम Launchpad आयात करें",
+            .importLegacy: "Legacy (.lmy) आयात करें",
+            .importTip: "सुझाव: “सिस्टम Launchpad आयात करें” पर क्लिक कर वर्तमान लेआउट लाएँ।",
+            .exportData: "डेटा निर्यात करें",
+            .importData: "डेटा आयात करें",
+            .refresh: "रिफ़्रेश",
+            .resetLayout: "लेआउट रीसेट करें",
+            .resetAlertTitle: "क्या लेआउट रीसेट करें?",
+            .resetAlertMessage: "यह सभी फ़ोल्डर हटाकर क्रम साफ़ करेगा और ऐप्स को पुनः स्कैन करेगा। सभी कस्टम बदलाव हटेंगे।",
+            .resetConfirm: "रीसेट",
+            .cancel: "रद्द करें",
+            .quit: "बंद करें",
+            .appearanceModeTitle: "रूप मोड",
+            .appearanceModeFollowSystem: "सिस्टम के अनुसार",
+            .appearanceModeLight: "हल्का",
+            .appearanceModeDark: "गहरा",
+            .folderWindowWidth: "फ़ोल्डर विंडो चौड़ाई",
+            .folderWindowHeight: "फ़ोल्डर विंडो ऊँचाई",
+            .folderWindowSizeHint: "केवल विंडो मोड में प्रभावी; क्लासिक फुलस्क्रीन में आकार तय रहता है।",
+            .versionPrefix: "v",
+            .folderNamePlaceholder: "फ़ोल्डर का नाम",
+            .viewOnGitHub: "प्रोजेक्ट लिंक खोलें",
+            .chooseButton: "चुनें",
+            .exportPanelMessage: "LaunchNext डेटा निर्यात करने के लिए फ़ोल्डर चुनें",
+            .importPrompt: "आयात करें",
+            .importPanelMessage: "वह फ़ोल्डर चुनें जिसे LaunchNext से निर्यात किया गया था",
+            .legacyArchivePanelMessage: "Legacy Launchpad आर्काइव (.lmy/.zip) या db फ़ाइल चुनें",
+            .importSuccessfulTitle: "आयात सफल",
+            .importFailedTitle: "आयात विफल",
+            .okButton: "ठीक",
+            .checkForUpdates: "अपडेट जाँचें",
+            .checkForUpdatesButton: "अपडेट जाँचें",
+            .checkingForUpdates: "अपडेट की जाँच हो रही है…",
+            .upToDate: "आप नवीनतम संस्करण पर हैं",
+            .updateAvailable: "नया अपडेट उपलब्ध",
+            .newVersion: "नया संस्करण:",
+            .downloadUpdate: "अपडेट डाउनलोड करें",
+            .updateCheckFailed: "अपडेट जाँच विफल",
+            .tryAgain: "पुनः प्रयास",
+            .autoCheckForUpdates: "स्वचालित रूप से अपडेट जाँचें",
+            .versionParseError: "संस्करण पार्स त्रुटि",
+            .settingsSectionGeneral: "सामान्य",
+            .settingsSectionAppearance: "रूप व व्यवहार",
+            .settingsSectionTitles: "ऐप नाम",
+            .settingsSectionPerformance: "प्रदर्शन",
+            .settingsSectionDevelopment: "विकास",
+            .settingsSectionAbout: "परिचय",
+            .developmentPlaceholderTitle: "डेवलपर प्लेग्राउंड",
+            .developmentPlaceholderSubtitle: "आने वाले टूल और प्रयोगात्मक सुविधाओं के लिए आरक्षित।",
+            .performancePlaceholderTitle: "प्रदर्शन डैशबोर्ड",
+            .performancePlaceholderSubtitle: "जल्द ही मेट्रिक्स यहाँ दिखेंगे।"
+        ]) { _, new in new }
+
+        builder[.hindi] = hindiDictionary
+
         translations = builder
     }
 
@@ -1022,6 +1215,8 @@ final class LocalizationManager {
             return "Deutsch"
         case .russian:
             return "Русский"
+        case .hindi:
+            return "हिन्दी"
         }
     }
 }

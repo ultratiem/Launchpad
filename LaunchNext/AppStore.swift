@@ -1,10 +1,43 @@
 import Foundation
 import AppKit
 import Combine
+import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 import Carbon
 import Carbon.HIToolbox
+
+enum AppearancePreference: String, CaseIterable, Identifiable {
+    case system
+    case light
+    case dark
+
+    var id: String { rawValue }
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
+
+    var nsAppearance: NSAppearance.Name? {
+        switch self {
+        case .system: return nil
+        case .light: return .aqua
+        case .dark: return .darkAqua
+        }
+    }
+
+    var localizationKey: LocalizationKey {
+        switch self {
+        case .system: return .appearanceModeFollowSystem
+        case .light: return .appearanceModeLight
+        case .dark: return .appearanceModeDark
+        }
+    }
+}
 
 private struct GitHubRelease: Decodable {
     let tagName: String
@@ -87,6 +120,32 @@ final class AppStore: ObservableObject {
     private static let defaultHoverMagnificationScale: Double = 1.2
     static let activePressScaleRange: ClosedRange<Double> = 0.85...1.0
     private static let defaultActivePressScale: Double = 0.92
+    static let folderPopoverWidthRange: ClosedRange<Double> = 0.6...0.95
+    static let folderPopoverHeightRange: ClosedRange<Double> = 0.6...0.95
+    private static let defaultFolderPopoverWidth: Double = 0.9
+    private static let defaultFolderPopoverHeight: Double = 0.85
+    private static let lastUpdateCheckKey = "lastUpdateCheckTimestamp"
+    private static let automaticUpdateInterval: TimeInterval = 60 * 60 * 24
+
+    private var lastUpdateCheck: Date? {
+        get {
+            if let timestamp = UserDefaults.standard.object(forKey: Self.lastUpdateCheckKey) as? TimeInterval {
+                return Date(timeIntervalSince1970: timestamp)
+            }
+            return nil
+        }
+        set {
+            if let date = newValue {
+                UserDefaults.standard.set(date.timeIntervalSince1970, forKey: Self.lastUpdateCheckKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Self.lastUpdateCheckKey)
+            }
+        }
+    }
+
+    private lazy var notificationDelegate = UpdateNotificationDelegate(openHandler: { [weak self] url in
+        self?.openReleaseURL(url)
+    })
 
     struct HotKeyConfiguration: Equatable {
         let keyCode: UInt16
@@ -190,6 +249,7 @@ final class AppStore: ObservableObject {
         }
     }
     @Published var searchText: String = ""
+    @Published private(set) var searchQuery: String = ""
     @Published var isStartOnLogin: Bool = false
     @Published var isFullscreenMode: Bool = false {
         didSet {
@@ -219,6 +279,14 @@ final class AppStore: ObservableObject {
 
     private static func clampRowSpacing(_ value: Double) -> Double {
         min(max(value, minRowSpacing), maxRowSpacing)
+    }
+
+    private static func clampFolderWidth(_ value: Double) -> Double {
+        min(max(value, folderPopoverWidthRange.lowerBound), folderPopoverWidthRange.upperBound)
+    }
+
+    private static func clampFolderHeight(_ value: Double) -> Double {
+        min(max(value, folderPopoverHeightRange.lowerBound), folderPopoverHeightRange.upperBound)
     }
 
     // 图标标题显示
@@ -372,7 +440,15 @@ final class AppStore: ObservableObject {
         if UserDefaults.standard.object(forKey: "autoCheckForUpdates") == nil { return true }
         return UserDefaults.standard.bool(forKey: "autoCheckForUpdates")
     }() {
-        didSet { UserDefaults.standard.set(autoCheckForUpdates, forKey: "autoCheckForUpdates") }
+        didSet {
+            UserDefaults.standard.set(autoCheckForUpdates, forKey: "autoCheckForUpdates")
+            if autoCheckForUpdates {
+                scheduleAutomaticUpdateCheck()
+            } else {
+                autoCheckTimer?.cancel()
+                autoCheckTimer = nil
+            }
+        }
     }
 
     @Published var animationDuration: Double = {
@@ -419,6 +495,49 @@ final class AppStore: ObservableObject {
             } else {
                 UserDefaults.standard.removeObject(forKey: Self.rememberedPageIndexKey)
             }
+        }
+    }
+
+    @Published var folderPopoverWidthFactor: Double = {
+        let stored = UserDefaults.standard.double(forKey: "folderPopoverWidthFactor")
+        if stored == 0 { return defaultFolderPopoverWidth }
+        return clampFolderWidth(stored)
+    }() {
+        didSet {
+            let clamped = AppStore.clampFolderWidth(folderPopoverWidthFactor)
+            if folderPopoverWidthFactor != clamped {
+                folderPopoverWidthFactor = clamped
+                return
+            }
+            UserDefaults.standard.set(folderPopoverWidthFactor, forKey: "folderPopoverWidthFactor")
+        }
+    }
+
+    @Published var folderPopoverHeightFactor: Double = {
+        let stored = UserDefaults.standard.double(forKey: "folderPopoverHeightFactor")
+        if stored == 0 { return defaultFolderPopoverHeight }
+        return clampFolderHeight(stored)
+    }() {
+        didSet {
+            let clamped = AppStore.clampFolderHeight(folderPopoverHeightFactor)
+            if folderPopoverHeightFactor != clamped {
+                folderPopoverHeightFactor = clamped
+                return
+            }
+            UserDefaults.standard.set(folderPopoverHeightFactor, forKey: "folderPopoverHeightFactor")
+        }
+    }
+
+    @Published var appearancePreference: AppearancePreference = {
+        if let raw = UserDefaults.standard.string(forKey: "appearancePreference"),
+           let pref = AppearancePreference(rawValue: raw) {
+            return pref
+        }
+        return .system
+    }() {
+        didSet {
+            guard oldValue != appearancePreference else { return }
+            UserDefaults.standard.set(appearancePreference.rawValue, forKey: "appearancePreference")
         }
     }
 
@@ -492,6 +611,7 @@ final class AppStore: ObservableObject {
     private let fsEventsQueue = DispatchQueue(label: "app.store.fsevents")
     private let customIconFileURL: URL
     private let defaultAppIcon: NSImage
+    private var autoCheckTimer: DispatchSourceTimer?
     
     // 计算属性
     private var itemsPerPage: Int { gridColumnsPerPage * gridRowsPerPage }
@@ -580,6 +700,18 @@ final class AppStore: ObservableObject {
             self.hasCustomAppIcon = false
         }
         applyCurrentAppIcon()
+
+        $searchText
+            .debounce(for: .milliseconds(500), scheduler: DispatchQueue.main)
+            .removeDuplicates()
+            .sink { [weak self] value in
+                self?.searchQuery = value
+            }
+            .store(in: &cancellables)
+
+        searchQuery = searchText
+
+        scheduleAutomaticUpdateCheck()
 
         self.rememberLastPage = shouldRememberPage
         if shouldRememberPage, let savedPageIndex {
@@ -1207,6 +1339,7 @@ final class AppStore: ObservableObject {
     }
 
     deinit {
+        autoCheckTimer?.cancel()
         stopAutoRescan()
     }
 
@@ -2934,9 +3067,37 @@ final class AppStore: ObservableObject {
 
     // MARK: - 更新检查功能
 
+    private func scheduleAutomaticUpdateCheck() {
+        autoCheckTimer?.cancel()
+        autoCheckTimer = nil
+
+        guard autoCheckForUpdates else { return }
+
+        performAutomaticUpdateCheckIfNeeded()
+
+        let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.main)
+        timer.schedule(deadline: .now() + Self.automaticUpdateInterval,
+                       repeating: Self.automaticUpdateInterval)
+        timer.setEventHandler { [weak self] in
+            self?.performAutomaticUpdateCheckIfNeeded()
+        }
+        timer.activate()
+        autoCheckTimer = timer
+    }
+
+    private func performAutomaticUpdateCheckIfNeeded() {
+        guard autoCheckForUpdates else { return }
+        let now = Date()
+        if let last = lastUpdateCheck, now.timeIntervalSince(last) < Self.automaticUpdateInterval {
+            return
+        }
+        checkForUpdates()
+    }
+
     func checkForUpdates() {
         guard updateState != .checking else { return }
 
+        lastUpdateCheck = Date()
         updateState = .checking
 
         Task {
@@ -2954,16 +3115,20 @@ final class AppStore: ObservableObject {
                                 notes: latestRelease.body
                             )
                             updateState = .updateAvailable(release)
+                            presentUpdateAlert(for: release)
                         } else {
                             updateState = .upToDate(latest: latestRelease.tagName)
                         }
                     } else {
                         updateState = .failed(localized(.versionParseError))
+                        presentUpdateFailureAlert(localized(.versionParseError))
                     }
                 }
             } catch {
                 await MainActor.run {
-                    updateState = .failed(error.localizedDescription)
+                    let message = error.localizedDescription
+                    updateState = .failed(message)
+                    presentUpdateFailureAlert(message)
                 }
             }
         }
@@ -2985,10 +3150,75 @@ final class AppStore: ObservableObject {
         return try JSONDecoder().decode(GitHubRelease.self, from: data)
     }
 
+    @MainActor
+    private func presentUpdateAlert(for release: UpdateRelease) {
+        let notification = NSUserNotification()
+        notification.title = localized(.updateAvailable)
+        notification.informativeText = "\(localized(.newVersion)) \(release.version)"
+        notification.hasActionButton = true
+        notification.actionButtonTitle = localized(.downloadUpdate)
+        notification.otherButtonTitle = localized(.cancel)
+        notification.userInfo = ["releaseURL": release.url.absoluteString]
+
+        NSUserNotificationCenter.default.delegate = notificationDelegate
+        NSUserNotificationCenter.default.deliver(notification)
+    }
+
+    @MainActor
+    private func presentUpdateFailureAlert(_ message: String) {
+        let notification = NSUserNotification()
+        notification.title = localized(.updateCheckFailed)
+        notification.informativeText = message
+
+        NSUserNotificationCenter.default.delegate = notificationDelegate
+        NSUserNotificationCenter.default.deliver(notification)
+    }
+
 func openReleaseURL(_ url: URL) {
     NSWorkspace.shared.open(url)
 }
 }
+
+private final class UpdateNotificationDelegate: NSObject, NSUserNotificationCenterDelegate {
+    private let openHandler: (URL) -> Void
+
+    init(openHandler: @escaping (URL) -> Void) {
+        self.openHandler = openHandler
+    }
+
+    func userNotificationCenter(_ center: NSUserNotificationCenter, shouldPresent notification: NSUserNotification) -> Bool {
+        true
+    }
+
+    func userNotificationCenter(_ center: NSUserNotificationCenter, didActivate notification: NSUserNotification) {
+        guard notification.activationType == .actionButtonClicked,
+              let urlString = notification.userInfo?["releaseURL"] as? String,
+              let url = URL(string: urlString) else {
+            return
+        }
+        openHandler(url)
+    }
+}
+
+#if DEBUG
+extension AppStore {
+    func simulateUpdateAvailable() {
+        let dummy = UpdateRelease(
+            version: "999.0.0",
+            url: URL(string: "https://github.com/RoversX/LaunchNext/releases/latest")!,
+            notes: ""
+        )
+        updateState = .updateAvailable(dummy)
+        presentUpdateAlert(for: dummy)
+    }
+
+    func simulateUpdateFailure() {
+        let message = "模拟更新失败。"
+        updateState = .failed(message)
+        presentUpdateFailureAlert(message)
+    }
+}
+#endif
 
 extension NSEvent.ModifierFlags {
     static let shortcutComponents: NSEvent.ModifierFlags = [.command, .option, .control, .shift]
