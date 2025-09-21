@@ -553,7 +553,7 @@ final class LocalizationManager {
                 .activePressScale: "Facteur de zoom arrière lors du clic",
                 .animationDurationLabel: "Durée de l’animation de transition",
                 .gridSizeChangeWarning: "Modifier la taille de la grille peut déplacer certaines icônes.",
-                .pageIndicatorHint: "Si le changement semble faible, ajustez l’espacement de l’indicateur ci-dessous.",
+                .pageIndicatorHint: "Si le changement semble subtil, ajustez l’espacement des points de pages ci-dessous.",
                 .rememberPageTitle: "Mémoriser la dernière page ouverte",
                 .globalShortcutTitle: "Raccourci global",
                 .shortcutSetButton: "Définir le raccourci",
