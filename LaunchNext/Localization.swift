@@ -5,11 +5,13 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     case english = "en"
     case simplifiedChinese = "zh-Hans"
     case japanese = "ja"
+    case korean = "ko"
     case french = "fr"
     case spanish = "es"
     case german = "de"
     case russian = "ru"
     case hindi = "hi"
+    case vietnamese = "vi"
 
     var id: String { rawValue }
 
@@ -18,11 +20,13 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         let lower = preferred.lowercased()
         if lower.hasPrefix("zh") { return .simplifiedChinese }
         if lower.hasPrefix("ja") { return .japanese }
+        if lower.hasPrefix("ko") { return .korean }
         if lower.hasPrefix("fr") { return .french }
         if lower.hasPrefix("es") { return .spanish }
         if lower.hasPrefix("de") { return .german }
         if lower.hasPrefix("ru") { return .russian }
         if lower.hasPrefix("hi") { return .hindi }
+        if lower.hasPrefix("vi") { return .vietnamese }
         return .english
     }
 }
@@ -90,8 +94,21 @@ enum LocalizationKey: String {
     case settingsSectionAbout
     case settingsSectionGeneral
     case settingsSectionAppearance
+    case settingsSectionAccessibility
+    case settingsSectionHiddenApps
+    case backgroundStyleTitle
+    case backgroundStyleOptionBlur
+    case backgroundStyleOptionGlass
     case developmentPlaceholderTitle
     case developmentPlaceholderSubtitle
+    case accessibilityPlaceholderTitle
+    case accessibilityPlaceholderSubtitle
+    case hiddenAppsAddButton
+    case hiddenAppsEmptyTitle
+    case hiddenAppsEmptySubtitle
+    case hiddenAppsHint
+    case hiddenAppsRemoveButton
+    case hiddenAppsSearchPlaceholder
     case performancePlaceholderTitle
     case performancePlaceholderSubtitle
     case renameSearchPlaceholder
@@ -124,11 +141,13 @@ enum LocalizationKey: String {
     case languageNameEnglish
     case languageNameChinese
     case languageNameJapanese
+    case languageNameKorean
     case languageNameFrench
     case languageNameSpanish
     case languageNameGerman
     case languageNameRussian
     case languageNameHindi
+    case languageNameVietnamese
     case folderNamePlaceholder
     case chooseButton
     case exportPanelMessage
@@ -246,11 +265,13 @@ final class LocalizationManager {
                 .languageNameEnglish: "英语",
                 .languageNameChinese: "中文",
                 .languageNameJapanese: "日语",
+                .languageNameKorean: "韩语",
                 .languageNameFrench: "法语",
                 .languageNameSpanish: "西班牙语",
                 .languageNameGerman: "德语",
                 .languageNameRussian: "俄语",
                 .languageNameHindi: "Hindi",
+                .languageNameVietnamese: "Vietnamese",
                 .folderNamePlaceholder: "Folder Name",
                 .viewOnGitHub: "Open project link",
                 .chooseButton: "Choose",
@@ -274,6 +295,123 @@ final class LocalizationManager {
                 .tryAgain: "Try Again",
                 .autoCheckForUpdates: "Check for updates automatically",
                 .versionParseError: "Version parsing error"
+            ],
+            .vietnamese: [
+                .noAppsFound: "Không tìm thấy ứng dụng nào",
+                .searchPlaceholder: "Tìm kiếm",
+                .renameSearchPlaceholder: "Tìm ứng dụng",
+                .customTitlePlaceholder: "Nhập tên tuỳ chỉnh",
+                .customTitleHint: "Đổi tên ứng dụng tại đây. Tên tuỳ chỉnh vẫn được giữ khi nhập dữ liệu hoặc đổi ngôn ngữ.",
+                .customTitleDefaultFormat: "Mặc định: %@",
+                .customTitleReset: "Khôi phục mặc định",
+                .customTitleAddButton: "Thêm ứng dụng",
+                .customTitleEmptyTitle: "Chưa có tên tuỳ chỉnh",
+                .customTitleEmptySubtitle: "Chọn một ứng dụng để bắt đầu đổi tên. Các tên tuỳ chỉnh sẽ được giữ lại kể cả khi nhập khẩu hoặc thay đổi ngôn ngữ.",
+                .customTitleNoResults: "Không có kết quả",
+                .customTitlePickerMessage: "Chọn ứng dụng cần quản lý tên hiển thị.",
+                .customTitleEdit: "Sửa",
+                .customTitleSave: "Lưu",
+                .customTitleCancel: "Huỷ",
+                .customTitleDelete: "Xoá",
+                .loadingApplications: "Đang tải ứng dụng…",
+                .showFPSOverlay: "Hiển thị lớp phủ FPS",
+                .showFPSOverlayDisclaimer: "Chỉ là số đo xấp xỉ; có thể không khớp với nhịp khung hình thực tế.",
+                .customIconTitle: "Biểu tượng ứng dụng",
+                .customIconChoose: "Chọn…",
+                .customIconReset: "Khôi phục mặc định",
+                .customIconHint: "Nên dùng tệp PNG/ICNS 512×512. Thay đổi được áp dụng ngay.",
+                .customIconError: "Không thể tải hình ảnh đã chọn.",
+                .pageIndicatorOffsetLabel: "Khoảng cách chỉ báo trang",
+                .folderWindowWidth: "Chiều rộng cửa sổ thư mục",
+                .folderWindowHeight: "Chiều cao cửa sổ thư mục",
+                .folderWindowSizeHint: "Chỉ áp dụng cho chế độ cửa sổ; toàn màn hình cổ điển dùng bố cục cố định.",
+                .appTitle: "LaunchNext",
+                .modifiedFrom: "Điều chỉnh từ LaunchNow phiên bản 1.3.1",
+                .backgroundHint: "Để chạy nền: ghim LaunchNext vào Dock hoặc dùng phím tắt để mở cửa sổ ứng dụng",
+                .classicMode: "Launchpad cổ điển (toàn màn hình)",
+                .iconSize: "Kích thước biểu tượng",
+                .iconsPerRow: "Số biểu tượng mỗi hàng",
+                .rowsPerPage: "Số hàng mỗi trang",
+                .iconHorizontalSpacing: "Khoảng cách ngang",
+                .iconVerticalSpacing: "Khoảng cách dọc",
+                .labelFontSize: "Cỡ chữ nhãn",
+                .smaller: "Nhỏ hơn",
+                .larger: "Lớn hơn",
+                .predictDrop: "Dự đoán vị trí thả",
+                .showLabels: "Hiển thị nhãn dưới biểu tượng",
+                .useLocalizedThirdPartyTitles: "Dùng tên ứng dụng đã bản địa hoá",
+                .enableAnimations: "Bật hoạt ảnh trượt",
+                .hoverMagnification: "Phóng to khi trỏ",
+                .hoverMagnificationScale: "Tỷ lệ phóng to khi trỏ",
+                .activePressEffect: "Phản hồi khi nhấn",
+                .activePressScale: "Tỷ lệ khi nhấn",
+                .animationDurationLabel: "Thời lượng hoạt ảnh trượt",
+                .gridSizeChangeWarning: "Thay đổi kích thước lưới có thể làm đổi vị trí một số biểu tượng.",
+                .pageIndicatorHint: "Nếu khoảng cách dọc khó nhận ra, hãy điều chỉnh vị trí chỉ báo trang bên dưới.",
+                .rememberPageTitle: "Ghi nhớ trang mở gần nhất",
+                .globalShortcutTitle: "Phím tắt toàn cục",
+                .shortcutSetButton: "Đặt phím tắt",
+                .shortcutSaveButton: "Lưu",
+                .shortcutClearButton: "Xoá",
+                .shortcutNotSet: "Chưa đặt",
+                .shortcutListening: "Đang chờ…",
+                .shortcutCapturePrompt: "Nhấn tổ hợp phím mong muốn. Bấm Esc để huỷ.",
+                .shortcutNoModifierWarning: "Không dùng phím bổ trợ có thể gây xung đột với ứng dụng khác.",
+                .scrollSensitivity: "Độ nhạy cuộn",
+                .low: "Thấp",
+                .high: "Cao",
+                .importSystem: "Nhập Launchpad hệ thống",
+                .importLegacy: "Nhập Legacy (.lmy)",
+                .importTip: "Mẹo: nhấn ‘Nhập Launchpad hệ thống’ để lấy trực tiếp bố cục hiện tại.",
+                .exportData: "Xuất dữ liệu",
+                .importData: "Nhập dữ liệu",
+                .refresh: "Làm mới",
+                .resetLayout: "Đặt lại bố cục",
+                .resetAlertTitle: "Đặt lại bố cục?",
+                .resetAlertMessage: "Thao tác này sẽ xoá mọi thư mục, làm trống thứ tự đã lưu và quét lại toàn bộ ứng dụng. Mọi tuỳ chỉnh sẽ bị mất.",
+                .resetConfirm: "Đặt lại",
+                .cancel: "Huỷ",
+                .quit: "Thoát",
+                .languagePickerTitle: "Ngôn ngữ",
+                .appearanceModeTitle: "Giao diện",
+                .appearanceModeFollowSystem: "Theo hệ thống",
+                .appearanceModeLight: "Sáng",
+                .appearanceModeDark: "Tối",
+                .versionPrefix: "v",
+                .languageNameSystem: "Theo hệ thống",
+                .languageNameEnglish: "Tiếng Anh",
+                .languageNameChinese: "Tiếng Trung",
+                .languageNameJapanese: "Tiếng Nhật",
+                .languageNameKorean: "Tiếng Hàn",
+                .languageNameFrench: "Tiếng Pháp",
+                .languageNameSpanish: "Tiếng Tây Ban Nha",
+                .languageNameGerman: "Tiếng Đức",
+                .languageNameRussian: "Tiếng Nga",
+                .languageNameHindi: "Tiếng Hindi",
+                .languageNameVietnamese: "Tiếng Việt",
+                .folderNamePlaceholder: "Tên thư mục",
+                .viewOnGitHub: "Mở liên kết dự án",
+                .chooseButton: "Chọn",
+                .exportPanelMessage: "Chọn thư mục đích để xuất dữ liệu LaunchNext",
+                .importPrompt: "Nhập",
+                .importPanelMessage: "Chọn thư mục được xuất từ LaunchNext trước đó",
+                .legacyArchivePanelMessage: "Chọn lưu trữ Launchpad Legacy (.lmy/.zip) hoặc tệp db",
+                .importSuccessfulTitle: "Nhập thành công",
+                .importFailedTitle: "Nhập thất bại",
+                .okButton: "OK",
+
+                // Cập nhật
+                .checkForUpdates: "Kiểm tra cập nhật",
+                .checkForUpdatesButton: "Kiểm tra cập nhật",
+                .checkingForUpdates: "Đang kiểm tra cập nhật...",
+                .upToDate: "Bạn đang dùng phiên bản mới nhất",
+                .updateAvailable: "Có bản cập nhật mới",
+                .newVersion: "Phiên bản mới:",
+                .downloadUpdate: "Tải bản cập nhật",
+                .updateCheckFailed: "Kiểm tra cập nhật thất bại",
+                .tryAgain: "Thử lại",
+                .autoCheckForUpdates: "Tự động kiểm tra cập nhật",
+                .versionParseError: "Lỗi phân tích phiên bản"
             ],
             .simplifiedChinese: [
                 .noAppsFound: "未找到任何应用",
@@ -361,11 +499,13 @@ final class LocalizationManager {
                 .languageNameEnglish: "英語",
                 .languageNameChinese: "中国語",
                 .languageNameJapanese: "日本語",
+                .languageNameKorean: "韩语",
                 .languageNameFrench: "フランス語",
                 .languageNameSpanish: "スペイン語",
                 .languageNameGerman: "ドイツ語",
-                .languageNameRussian: "ロシア語",
-                .languageNameHindi: "ヒンディー語",
+                .languageNameRussian: "俄语",
+                .languageNameHindi: "印地语",
+                .languageNameVietnamese: "越南语",
                 .folderNamePlaceholder: "文件夹名称",
                 .viewOnGitHub: "打开项目链接",
                 .chooseButton: "选择",
@@ -476,11 +616,13 @@ final class LocalizationManager {
                 .languageNameEnglish: "Anglais",
                 .languageNameChinese: "Chinois",
                 .languageNameJapanese: "Japonais",
+                .languageNameKorean: "Coréen",
                 .languageNameFrench: "Français",
                 .languageNameSpanish: "Espagnol",
                 .languageNameGerman: "Allemand",
                 .languageNameRussian: "Russe",
                 .languageNameHindi: "Hindi",
+                .languageNameVietnamese: "Vietnamien",
                 .folderNamePlaceholder: "フォルダ名",
                 .viewOnGitHub: "プロジェクトリンクを開く",
                 .chooseButton: "選択",
@@ -504,6 +646,123 @@ final class LocalizationManager {
                 .tryAgain: "再試行",
                 .autoCheckForUpdates: "自動でアップデートを確認",
                 .versionParseError: "バージョン解析エラー"
+            ],
+            .korean: [
+                .noAppsFound: "앱을 찾을 수 없습니다",
+                .searchPlaceholder: "검색",
+                .renameSearchPlaceholder: "앱 검색",
+                .customTitlePlaceholder: "사용자 지정 이름 입력",
+                .customTitleHint: "여기에서 앱 이름을 변경할 수 있습니다. 다시 가져오거나 언어를 바꿔도 유지됩니다.",
+                .customTitleDefaultFormat: "기본값: %@",
+                .customTitleReset: "기본값으로 복원",
+                .customTitleAddButton: "앱 추가",
+                .customTitleEmptyTitle: "사용자 지정 이름이 없습니다",
+                .customTitleEmptySubtitle: "버튼을 눌러 앱을 선택하면 이름 변경을 시작할 수 있습니다. 가져오기나 언어 변경 후에도 유지됩니다.",
+                .customTitleNoResults: "일치하는 항목이 없습니다",
+                .customTitlePickerMessage: "표시 이름을 관리할 앱을 선택하세요.",
+                .customTitleEdit: "편집",
+                .customTitleSave: "저장",
+                .customTitleCancel: "취소",
+                .customTitleDelete: "삭제",
+                .loadingApplications: "앱을 불러오는 중…",
+                .showFPSOverlay: "FPS 오버레이 표시",
+                .showFPSOverlayDisclaimer: "대략적인 수치로 실제 프레임 속도와 다를 수 있습니다.",
+                .customIconTitle: "앱 아이콘",
+                .customIconChoose: "선택…",
+                .customIconReset: "기본 아이콘으로 복원",
+                .customIconHint: "512×512 PNG/ICNS 파일을 권장합니다. 변경 사항은 즉시 적용됩니다.",
+                .customIconError: "선택한 이미지를 불러올 수 없습니다.",
+                .pageIndicatorOffsetLabel: "페이지 지시점 간격",
+                .appTitle: "LaunchNext",
+                .modifiedFrom: "LaunchNow 1.3.1을 기반으로 수정",
+                .backgroundHint: "백그라운드에서 실행하려면 LaunchNext를 Dock에 고정하거나 단축키로 창을 여세요",
+                .classicMode: "클래식 Launchpad(전체 화면)",
+                .iconSize: "아이콘 크기",
+                .iconsPerRow: "행당 아이콘 수",
+                .rowsPerPage: "페이지당 행 수",
+                .iconHorizontalSpacing: "가로 간격",
+                .iconVerticalSpacing: "세로 간격",
+                .labelFontSize: "레이블 글자 크기",
+                .smaller: "작게",
+                .larger: "크게",
+                .predictDrop: "놓을 위치 예측",
+                .showLabels: "아이콘 이름 표시",
+                .useLocalizedThirdPartyTitles: "로컬라이즈된 앱 이름 사용",
+                .enableAnimations: "슬라이드 애니메이션 사용",
+                .hoverMagnification: "호버 확대",
+                .hoverMagnificationScale: "호버 확대 배율",
+                .activePressEffect: "누를 때 피드백",
+                .activePressScale: "누를 때 배율",
+                .animationDurationLabel: "슬라이드 애니메이션 길이",
+                .gridSizeChangeWarning: "격자 크기를 바꾸면 일부 아이콘 위치가 변경될 수 있습니다.",
+                .pageIndicatorHint: "변화가 미미하다면 아래에서 페이지 지시점 위치를 조정하세요.",
+                .rememberPageTitle: "마지막으로 연 페이지 기억",
+                .globalShortcutTitle: "전역 단축키",
+                .shortcutSetButton: "단축키 설정",
+                .shortcutSaveButton: "저장",
+                .shortcutClearButton: "지우기",
+                .shortcutNotSet: "설정되지 않음",
+                .shortcutListening: "키 입력 대기 중…",
+                .shortcutCapturePrompt: "원하는 키 조합을 누르세요. Esc로 취소합니다.",
+                .shortcutNoModifierWarning: "보조키 없이 설정하면 다른 앱과 충돌할 수 있습니다.",
+                .scrollSensitivity: "스크롤 민감도",
+                .low: "낮음",
+                .high: "높음",
+                .importSystem: "시스템 Launchpad 가져오기",
+                .importLegacy: "Legacy (.lmy) 가져오기",
+                .importTip: "팁: ‘시스템 Launchpad 가져오기’를 누르면 기본 Launchpad 배치를 바로 불러옵니다.",
+                .exportData: "데이터 내보내기",
+                .importData: "데이터 가져오기",
+                .refresh: "새로 고침",
+                .resetLayout: "레이아웃 초기화",
+                .resetAlertTitle: "레이아웃을 초기화할까요?",
+                .resetAlertMessage: "모든 폴더를 삭제하고 저장된 순서를 지운 뒤 앱을 다시 스캔합니다. 모든 사용자 설정이 사라집니다.",
+                .resetConfirm: "초기화",
+                .cancel: "취소",
+                .quit: "종료",
+                .languagePickerTitle: "언어",
+                .appearanceModeTitle: "모양",
+                .appearanceModeFollowSystem: "시스템과 동일",
+                .appearanceModeLight: "라이트",
+                .appearanceModeDark: "다크",
+                .folderWindowWidth: "폴더 창 너비",
+                .folderWindowHeight: "폴더 창 높이",
+                .folderWindowSizeHint: "창 모드에서만 적용됩니다. 클래식 전체 화면은 고정 레이아웃을 사용합니다.",
+                .versionPrefix: "v",
+                .languageNameSystem: "시스템과 동일",
+                .languageNameEnglish: "영어",
+                .languageNameChinese: "중국어",
+                .languageNameJapanese: "일본어",
+                .languageNameKorean: "한국어",
+                .languageNameFrench: "프랑스어",
+                .languageNameSpanish: "스페인어",
+                .languageNameGerman: "독일어",
+                .languageNameRussian: "러시아어",
+                .languageNameHindi: "힌디어",
+                .languageNameVietnamese: "베트남어",
+                .folderNamePlaceholder: "폴더 이름",
+                .viewOnGitHub: "프로젝트 링크 열기",
+                .chooseButton: "선택",
+                .exportPanelMessage: "LaunchNext 데이터를 내보낼 폴더를 선택하세요",
+                .importPrompt: "가져오기",
+                .importPanelMessage: "LaunchNext에서 내보낸 폴더를 선택하세요",
+                .legacyArchivePanelMessage: "Legacy Launchpad 아카이브(.lmy/.zip) 또는 db 파일을 선택하세요",
+                .importSuccessfulTitle: "가져오기에 성공했습니다",
+                .importFailedTitle: "가져오기에 실패했습니다",
+                .okButton: "확인",
+
+                // 업데이트 관련
+                .checkForUpdates: "업데이트 확인",
+                .checkForUpdatesButton: "업데이트 확인",
+                .checkingForUpdates: "업데이트를 확인하는 중…",
+                .upToDate: "최신 버전입니다",
+                .updateAvailable: "업데이트 사용 가능",
+                .newVersion: "새 버전:",
+                .downloadUpdate: "업데이트 다운로드",
+                .updateCheckFailed: "업데이트 확인 실패",
+                .tryAgain: "다시 시도",
+                .autoCheckForUpdates: "업데이트 자동 확인",
+                .versionParseError: "버전 분석 오류"
             ],
             .french: [
                 .noAppsFound: "Aucune application trouvée",
@@ -591,6 +850,7 @@ final class LocalizationManager {
                 .languageNameEnglish: "English",
                 .languageNameChinese: "中文",
                 .languageNameJapanese: "日本語",
+                .languageNameKorean: "Coréen",
                 .languageNameFrench: "Français",
                 .languageNameSpanish: "Español",
                 .languageNameGerman: "Deutsch",
@@ -706,10 +966,12 @@ final class LocalizationManager {
                 .languageNameEnglish: "English",
                 .languageNameChinese: "中文",
                 .languageNameJapanese: "日本語",
+                .languageNameKorean: "한국어",
                 .languageNameFrench: "Français",
                 .languageNameSpanish: "Español",
                 .languageNameGerman: "Deutsch",
                 .languageNameRussian: "Русский",
+                .languageNameVietnamese: "Vietnamita",
                 .folderNamePlaceholder: "Nombre de la carpeta",
                 .viewOnGitHub: "Abrir enlace del proyecto",
                 .chooseButton: "Elegir",
@@ -820,11 +1082,13 @@ final class LocalizationManager {
                 .languageNameEnglish: "Englisch",
                 .languageNameChinese: "Chinesisch",
                 .languageNameJapanese: "Japanisch",
+                .languageNameKorean: "Koreanisch",
                 .languageNameFrench: "Französisch",
                 .languageNameSpanish: "Spanisch",
                 .languageNameGerman: "Deutsch",
                 .languageNameRussian: "Russisch",
                 .languageNameHindi: "Hindi",
+                .languageNameVietnamese: "Vietnamesisch",
                 .folderNamePlaceholder: "Ordnername",
                 .viewOnGitHub: "Projektlink öffnen",
                 .chooseButton: "Auswählen",
@@ -935,11 +1199,13 @@ final class LocalizationManager {
                 .languageNameEnglish: "Английский",
                 .languageNameChinese: "Китайский",
                 .languageNameJapanese: "Японский",
+                .languageNameKorean: "Корейский",
                 .languageNameFrench: "Французский",
                 .languageNameSpanish: "Испанский",
                 .languageNameGerman: "Немецкий",
                 .languageNameRussian: "Русский",
                 .languageNameHindi: "Хинди",
+                .languageNameVietnamese: "Вьетнамский",
                 .folderNamePlaceholder: "Название папки",
                 .viewOnGitHub: "Открыть ссылку проекта",
                 .chooseButton: "Выбрать",
@@ -969,12 +1235,25 @@ final class LocalizationManager {
         builder[.english]?.merge([
             .settingsSectionGeneral: "General",
             .settingsSectionAppearance: "Appearance",
+            .settingsSectionAccessibility: "Accessibility",
+            .settingsSectionHiddenApps: "Hidden apps",
             .settingsSectionTitles: "App titles",
             .settingsSectionPerformance: "Performance",
             .settingsSectionDevelopment: "Development",
             .settingsSectionAbout: "About",
             .developmentPlaceholderTitle: "Development playground",
             .developmentPlaceholderSubtitle: "Reserved for future tools and experimental features.",
+            .backgroundStyleTitle: "Background style",
+            .backgroundStyleOptionBlur: "Blur",
+            .backgroundStyleOptionGlass: "Liquid glass",
+            .hiddenAppsAddButton: "Hide application",
+            .hiddenAppsEmptyTitle: "No hidden apps yet",
+            .hiddenAppsEmptySubtitle: "Select an application to hide it from LaunchNext.",
+            .hiddenAppsHint: "Hidden apps disappear from the grid. Remove them here to restore.",
+            .hiddenAppsRemoveButton: "Unhide",
+            .hiddenAppsSearchPlaceholder: "Filter hidden apps",
+            .accessibilityPlaceholderTitle: "Accessibility controls",
+            .accessibilityPlaceholderSubtitle: "Accessibility settings are planned; nothing here yet.",
             .performancePlaceholderTitle: "Performance dashboard",
             .performancePlaceholderSubtitle: "Monitoring metrics will appear here soon."
         ]) { _, new in new }
@@ -982,12 +1261,25 @@ final class LocalizationManager {
         builder[.simplifiedChinese]?.merge([
             .settingsSectionGeneral: "通用",
             .settingsSectionAppearance: "外观与行为",
+            .settingsSectionAccessibility: "可访问性",
+            .settingsSectionHiddenApps: "隐藏应用",
             .settingsSectionTitles: "应用名称",
             .settingsSectionPerformance: "性能",
             .settingsSectionDevelopment: "开发",
             .settingsSectionAbout: "关于",
             .developmentPlaceholderTitle: "开发功能预留",
             .developmentPlaceholderSubtitle: "未来将用于调试工具或实验功能。",
+            .backgroundStyleTitle: "背景样式",
+            .backgroundStyleOptionBlur: "高斯模糊",
+            .backgroundStyleOptionGlass: "液态玻璃",
+            .hiddenAppsAddButton: "隐藏应用",
+            .hiddenAppsEmptyTitle: "尚未隐藏任何应用",
+            .hiddenAppsEmptySubtitle: "选择一个应用即可将其从 LaunchNext 网格中隐藏。",
+            .hiddenAppsHint: "被隐藏的应用不会显示在网格中，可在此处取消隐藏。",
+            .hiddenAppsRemoveButton: "取消隐藏",
+            .hiddenAppsSearchPlaceholder: "搜索隐藏的应用",
+            .accessibilityPlaceholderTitle: "可访问性设置",
+            .accessibilityPlaceholderSubtitle: "我们还在设计相关选项，敬请期待。",
             .performancePlaceholderTitle: "性能面板",
             .performancePlaceholderSubtitle: "性能指标将很快展示在此。"
         ]) { _, new in new }
@@ -995,25 +1287,103 @@ final class LocalizationManager {
         builder[.japanese]?.merge([
             .settingsSectionGeneral: "一般",
             .settingsSectionAppearance: "外観と動作",
+            .settingsSectionAccessibility: "アクセシビリティ",
+            .settingsSectionHiddenApps: "非表示のアプリ",
             .settingsSectionTitles: "アプリ名",
             .settingsSectionPerformance: "パフォーマンス",
             .settingsSectionDevelopment: "開発",
             .settingsSectionAbout: "情報",
             .developmentPlaceholderTitle: "開発者プレイグラウンド",
             .developmentPlaceholderSubtitle: "将来的なツールや実験機能のためのスペースです。",
+            .backgroundStyleTitle: "背景スタイル",
+            .backgroundStyleOptionBlur: "ぼかし",
+            .backgroundStyleOptionGlass: "リキッドガラス",
+            .hiddenAppsAddButton: "アプリを非表示にする",
+            .hiddenAppsEmptyTitle: "非表示のアプリはありません",
+            .hiddenAppsEmptySubtitle: "ここでアプリを選ぶと LaunchNext から隠せます。",
+            .hiddenAppsHint: "非表示にしたアプリはグリッドから消えます。再表示する場合はここで解除してください。",
+            .hiddenAppsRemoveButton: "再表示",
+            .hiddenAppsSearchPlaceholder: "非表示のアプリを検索",
+            .accessibilityPlaceholderTitle: "アクセシビリティ設定",
+            .accessibilityPlaceholderSubtitle: "アクセシビリティ項目は作業中です。しばらくお待ちください。",
             .performancePlaceholderTitle: "パフォーマンスダッシュボード",
             .performancePlaceholderSubtitle: "ここに指標が表示されます。"
+        ]) { _, new in new }
+
+        builder[.korean]?.merge([
+            .settingsSectionGeneral: "일반",
+            .settingsSectionAppearance: "모양과 동작",
+            .settingsSectionAccessibility: "손쉬운 사용",
+            .settingsSectionHiddenApps: "숨김 앱",
+            .settingsSectionTitles: "앱 이름",
+            .settingsSectionPerformance: "성능",
+            .settingsSectionDevelopment: "개발",
+            .settingsSectionAbout: "정보",
+            .developmentPlaceholderTitle: "개발자 플레이그라운드",
+            .developmentPlaceholderSubtitle: "향후 도구와 실험 기능을 위한 공간입니다.",
+            .backgroundStyleTitle: "배경 스타일",
+            .backgroundStyleOptionBlur: "블러",
+            .backgroundStyleOptionGlass: "액체 유리",
+            .hiddenAppsAddButton: "앱 숨기기",
+            .hiddenAppsEmptyTitle: "숨겨진 앱이 없습니다",
+            .hiddenAppsEmptySubtitle: "이곳에서 앱을 선택하면 LaunchNext 그리드에서 숨길 수 있습니다.",
+            .hiddenAppsHint: "숨긴 앱은 그리드에서 사라집니다. 여기에서 다시 표시할 수 있습니다.",
+            .hiddenAppsRemoveButton: "다시 표시",
+            .hiddenAppsSearchPlaceholder: "숨김 앱 검색",
+            .accessibilityPlaceholderTitle: "손쉬운 사용 설정",
+            .accessibilityPlaceholderSubtitle: "손쉬운 사용 옵션을 준비 중입니다. 잠시만 기다려 주세요.",
+            .performancePlaceholderTitle: "성능 대시보드",
+            .performancePlaceholderSubtitle: "곧 이곳에서 지표를 확인할 수 있습니다."
+        ]) { _, new in new }
+
+        builder[.vietnamese]?.merge([
+            .settingsSectionGeneral: "Chung",
+            .settingsSectionAppearance: "Giao diện & hành vi",
+            .settingsSectionAccessibility: "Hỗ trợ tiếp cận",
+            .settingsSectionHiddenApps: "Ứng dụng ẩn",
+            .settingsSectionTitles: "Tên ứng dụng",
+            .settingsSectionPerformance: "Hiệu năng",
+            .settingsSectionDevelopment: "Phát triển",
+            .settingsSectionAbout: "Giới thiệu",
+            .developmentPlaceholderTitle: "Khu vực dành cho nhà phát triển",
+            .developmentPlaceholderSubtitle: "Không gian cho các công cụ và tính năng thử nghiệm trong tương lai.",
+            .backgroundStyleTitle: "Kiểu nền",
+            .backgroundStyleOptionBlur: "Làm mờ",
+            .backgroundStyleOptionGlass: "Kính lỏng",
+            .hiddenAppsAddButton: "Ẩn ứng dụng",
+            .hiddenAppsEmptyTitle: "Chưa có ứng dụng nào bị ẩn",
+            .hiddenAppsEmptySubtitle: "Chọn một ứng dụng để ẩn khỏi lưới LaunchNext.",
+            .hiddenAppsHint: "Ứng dụng bị ẩn sẽ biến mất khỏi lưới. Huỷ ẩn tại đây để khôi phục.",
+            .hiddenAppsRemoveButton: "Huỷ ẩn",
+            .hiddenAppsSearchPlaceholder: "Tìm ứng dụng bị ẩn",
+            .accessibilityPlaceholderTitle: "Tuỳ chọn hỗ trợ tiếp cận",
+            .accessibilityPlaceholderSubtitle: "Chúng tôi vẫn đang xây dựng các tuỳ chọn hỗ trợ tiếp cận.",
+            .performancePlaceholderTitle: "Bảng điều khiển hiệu năng",
+            .performancePlaceholderSubtitle: "Các chỉ số sẽ sớm xuất hiện tại đây."
         ]) { _, new in new }
 
         builder[.french]?.merge([
             .settingsSectionGeneral: "Général",
             .settingsSectionAppearance: "Apparence",
+            .settingsSectionAccessibility: "Accessibilité",
+            .settingsSectionHiddenApps: "Apps masquées",
             .settingsSectionTitles: "Noms des applications",
             .settingsSectionPerformance: "Performances",
             .settingsSectionDevelopment: "Développement",
             .settingsSectionAbout: "À propos",
             .developmentPlaceholderTitle: "Espace développeur",
             .developmentPlaceholderSubtitle: "Réservé aux outils et fonctionnalités expérimentales à venir.",
+            .backgroundStyleTitle: "Style de fond",
+            .backgroundStyleOptionBlur: "Flou",
+            .backgroundStyleOptionGlass: "Verre liquide",
+            .hiddenAppsAddButton: "Masquer une app",
+            .hiddenAppsEmptyTitle: "Aucune app masquée",
+            .hiddenAppsEmptySubtitle: "Choisissez une application pour la masquer dans LaunchNext.",
+            .hiddenAppsHint: "Les apps masquées n'apparaissent plus dans la grille. Rétablissez-les ici.",
+            .hiddenAppsRemoveButton: "Afficher",
+            .hiddenAppsSearchPlaceholder: "Rechercher des apps masquées",
+            .accessibilityPlaceholderTitle: "Paramètres d’accessibilité",
+            .accessibilityPlaceholderSubtitle: "Les options d’accessibilité sont en préparation.",
             .performancePlaceholderTitle: "Tableau de bord des performances",
             .performancePlaceholderSubtitle: "Les indicateurs apparaîtront ici prochainement."
         ]) { _, new in new }
@@ -1021,12 +1391,25 @@ final class LocalizationManager {
         builder[.spanish]?.merge([
             .settingsSectionGeneral: "General",
             .settingsSectionAppearance: "Apariencia y comportamiento",
+            .settingsSectionAccessibility: "Accesibilidad",
+            .settingsSectionHiddenApps: "Apps ocultas",
             .settingsSectionTitles: "Nombres de apps",
             .settingsSectionPerformance: "Rendimiento",
             .settingsSectionDevelopment: "Desarrollo",
             .settingsSectionAbout: "Acerca de",
             .developmentPlaceholderTitle: "Zona de desarrollo",
             .developmentPlaceholderSubtitle: "Reservado para futuras herramientas y funciones experimentales.",
+            .backgroundStyleTitle: "Estilo de fondo",
+            .backgroundStyleOptionBlur: "Desenfoque",
+            .backgroundStyleOptionGlass: "Vidrio líquido",
+            .hiddenAppsAddButton: "Ocultar app",
+            .hiddenAppsEmptyTitle: "Todavía no hay apps ocultas",
+            .hiddenAppsEmptySubtitle: "Elige una aplicación para ocultarla en LaunchNext.",
+            .hiddenAppsHint: "Las apps ocultas desaparecen de la cuadrícula. Restáuralas desde aquí.",
+            .hiddenAppsRemoveButton: "Mostrar",
+            .hiddenAppsSearchPlaceholder: "Buscar apps ocultas",
+            .accessibilityPlaceholderTitle: "Opciones de accesibilidad",
+            .accessibilityPlaceholderSubtitle: "Las configuraciones de accesibilidad aún no están listas.",
             .performancePlaceholderTitle: "Panel de rendimiento",
             .performancePlaceholderSubtitle: "Muy pronto podrás ver métricas aquí."
         ]) { _, new in new }
@@ -1034,12 +1417,25 @@ final class LocalizationManager {
         builder[.german]?.merge([
             .settingsSectionGeneral: "Allgemein",
             .settingsSectionAppearance: "Darstellung & Verhalten",
+            .settingsSectionAccessibility: "Barrierefreiheit",
+            .settingsSectionHiddenApps: "Ausgeblendete Apps",
             .settingsSectionTitles: "App-Namen",
             .settingsSectionPerformance: "Performance",
             .settingsSectionDevelopment: "Entwicklung",
             .settingsSectionAbout: "Info",
             .developmentPlaceholderTitle: "Entwicklerbereich",
             .developmentPlaceholderSubtitle: "Reserviert für zukünftige Tools und experimentelle Features.",
+            .backgroundStyleTitle: "Hintergrundstil",
+            .backgroundStyleOptionBlur: "Unschärfe",
+            .backgroundStyleOptionGlass: "Liquid Glass",
+            .hiddenAppsAddButton: "App ausblenden",
+            .hiddenAppsEmptyTitle: "Noch keine Apps ausgeblendet",
+            .hiddenAppsEmptySubtitle: "Wähle eine App, um sie in LaunchNext auszublenden.",
+            .hiddenAppsHint: "Ausgeblendete Apps verschwinden aus dem Raster. Hier kannst du sie wieder einblenden.",
+            .hiddenAppsRemoveButton: "Einblenden",
+            .hiddenAppsSearchPlaceholder: "Ausgeblendete Apps suchen",
+            .accessibilityPlaceholderTitle: "Barrierefreiheit",
+            .accessibilityPlaceholderSubtitle: "Die Einstellungen zur Barrierefreiheit folgen noch.",
             .performancePlaceholderTitle: "Performance-Dashboard",
             .performancePlaceholderSubtitle: "Kennzahlen folgen in Kürze."
         ]) { _, new in new }
@@ -1047,12 +1443,25 @@ final class LocalizationManager {
         builder[.russian]?.merge([
             .settingsSectionGeneral: "Общие",
             .settingsSectionAppearance: "Внешний вид и поведение",
+            .settingsSectionAccessibility: "Доступность",
+            .settingsSectionHiddenApps: "Скрытые приложения",
             .settingsSectionTitles: "Названия приложений",
             .settingsSectionPerformance: "Производительность",
             .settingsSectionDevelopment: "Разработка",
             .settingsSectionAbout: "О приложении",
             .developmentPlaceholderTitle: "Площадка для разработчиков",
             .developmentPlaceholderSubtitle: "Здесь появятся инструменты и экспериментальные возможности.",
+            .backgroundStyleTitle: "Стиль фона",
+            .backgroundStyleOptionBlur: "Размытие",
+            .backgroundStyleOptionGlass: "Жидкое стекло",
+            .hiddenAppsAddButton: "Скрыть приложение",
+            .hiddenAppsEmptyTitle: "Скрытых приложений нет",
+            .hiddenAppsEmptySubtitle: "Выберите приложение, чтобы скрыть его из LaunchNext.",
+            .hiddenAppsHint: "Скрытые приложения не отображаются в сетке. Здесь можно вернуть их обратно.",
+            .hiddenAppsRemoveButton: "Показать",
+            .hiddenAppsSearchPlaceholder: "Поиск среди скрытых приложений",
+            .accessibilityPlaceholderTitle: "Параметры доступности",
+            .accessibilityPlaceholderSubtitle: "Настройки доступности ещё в разработке.",
             .performancePlaceholderTitle: "Панель производительности",
             .performancePlaceholderSubtitle: "Скоро здесь появятся показатели эффективности."
         ]) { _, new in new }
@@ -1063,11 +1472,13 @@ final class LocalizationManager {
         hindiDictionary[.languageNameEnglish] = "English"
         hindiDictionary[.languageNameChinese] = "中文"
         hindiDictionary[.languageNameJapanese] = "日本語"
+        hindiDictionary[.languageNameKorean] = "한국어"
         hindiDictionary[.languageNameFrench] = "Français"
         hindiDictionary[.languageNameSpanish] = "Español"
         hindiDictionary[.languageNameGerman] = "Deutsch"
         hindiDictionary[.languageNameRussian] = "Русский"
         hindiDictionary[.languageNameHindi] = "हिन्दी"
+        hindiDictionary[.languageNameVietnamese] = "वियतनामी"
 
         hindiDictionary.merge([
             .noAppsFound: "कोई ऐप नहीं मिला",
@@ -1173,12 +1584,25 @@ final class LocalizationManager {
             .versionParseError: "संस्करण पार्स त्रुटि",
             .settingsSectionGeneral: "सामान्य",
             .settingsSectionAppearance: "रूप व व्यवहार",
+            .settingsSectionAccessibility: "सुलभता",
+            .settingsSectionHiddenApps: "छिपे हुए ऐप्स",
             .settingsSectionTitles: "ऐप नाम",
             .settingsSectionPerformance: "प्रदर्शन",
             .settingsSectionDevelopment: "विकास",
             .settingsSectionAbout: "परिचय",
             .developmentPlaceholderTitle: "डेवलपर प्लेग्राउंड",
             .developmentPlaceholderSubtitle: "आने वाले टूल और प्रयोगात्मक सुविधाओं के लिए आरक्षित।",
+            .backgroundStyleTitle: "पृष्ठभूमि शैली",
+            .backgroundStyleOptionBlur: "धुंधला",
+            .backgroundStyleOptionGlass: "लिक्विड ग्लास",
+            .hiddenAppsAddButton: "ऐप छिपाएँ",
+            .hiddenAppsEmptyTitle: "अभी कोई ऐप छिपा नहीं है",
+            .hiddenAppsEmptySubtitle: "LaunchNext से हटाने के लिए किसी ऐप का चयन करें।",
+            .hiddenAppsHint: "छिपाए गए ऐप्स ग्रिड से गायब हो जाते हैं। उन्हें वापस लाने के लिए यहाँ से हटाएँ।",
+            .hiddenAppsRemoveButton: "वापस दिखाएँ",
+            .hiddenAppsSearchPlaceholder: "छिपे हुए ऐप खोजें",
+            .accessibilityPlaceholderTitle: "सुलभता सेटिंग्स",
+            .accessibilityPlaceholderSubtitle: "सुलभता से संबंधित विकल्प अभी तैयार नहीं हैं।",
             .performancePlaceholderTitle: "प्रदर्शन डैशबोर्ड",
             .performancePlaceholderSubtitle: "जल्द ही मेट्रिक्स यहाँ दिखेंगे।"
         ]) { _, new in new }
@@ -1207,6 +1631,10 @@ final class LocalizationManager {
             return "中文"
         case .japanese:
             return "日本語"
+        case .korean:
+            return "한국어"
+        case .vietnamese:
+            return "Tiếng Việt"
         case .french:
             return "Français"
         case .spanish:

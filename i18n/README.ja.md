@@ -1,6 +1,6 @@
 # LaunchNext
 
-**言語**: [English](../README.md) | [中文](README.zh.md) | [日本語](README.ja.md) | [Français](README.fr.md) | [Español](README.es.md) | [Deutsch](README.de.md) | [Русский](README.ru.md) | [हिन्दी](README.hi.md)
+**言語**: [English](../README.md) | [中文](README.zh.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Français](README.fr.md) | [Español](README.es.md) | [Deutsch](README.de.md) | [Русский](README.ru.md) | [हिन्दी](README.hi.md) | [Tiếng Việt](README.vi.md)
 
 ## 📥 ダウンロード
 
@@ -18,6 +18,12 @@ macOS Tahoe は Launchpad を削除しましたが、新しいインターフェ
 *[LaunchNow](https://github.com/ggkevinnnn/LaunchNow)（作者：ggkevinnnn）をベースに開発 - 元のプロジェクトに大変感謝しています！この拡張版が元のリポジトリにマージされることを願っています*
 
 *LaunchNowはGPL 3ライセンスを選択しており、LaunchNextは同じライセンス条項に従います。*
+
+⚠️ **macOS がアプリをブロックする場合、ターミナルで実行してください：**
+```bash
+sudo xattr -r -d com.apple.quarantine /Applications/LaunchNext.app
+```
+**理由**：私は Apple の開発者証明書（年間$99）を購入する余裕がないため、macOS は未署名のアプリをブロックします。このコマンドは隔離フラグを削除してアプリを実行可能にします。**信頼できるアプリのみでこのコマンドを使用してください。**
 
 ### LaunchNext が提供する機能
 - ✅ **旧システム Launchpad からのワンクリックインポート** - ネイティブ Launchpad SQLite データベース（`/private$(getconf DARWIN_USER_DIR)com.apple.dock.launchpad/db/db`）を直接読み取り、既存のフォルダ、アプリの位置、レイアウトを完璧に再現

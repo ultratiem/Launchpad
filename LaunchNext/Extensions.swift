@@ -17,13 +17,22 @@ extension Font {
 
 // MARK: - View Extensions for Glass Effect
 extension View {
-    /// App 背景特效：液态玻璃（regular Material + 轻阴影）
-    func glassEffect<S: Shape>(in shape: S) -> some View {
-        self.background(
-            shape
-                .fill(.regularMaterial, style: FillStyle())
-                .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
-        )
+    @ViewBuilder
+    func liquidGlass<S: Shape>(in shape: S, isEnabled: Bool = true) -> some View {
+        if #available(macOS 15.0, iOS 18.0, *) {
+            self.glassEffect(.regular, in: shape)
+        } else {
+            self.background(.ultraThinMaterial, in: shape)
+        }
+    }
+
+    @ViewBuilder
+    func liquidGlass(isEnabled: Bool = true) -> some View {
+        if #available(macOS 15.0, iOS 18.0, *) {
+            self.glassEffect(.regular)
+        } else {
+            self.background(.ultraThinMaterial)
+        }
     }
 }
  

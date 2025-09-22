@@ -132,7 +132,7 @@ private struct LaunchpadItemButtonContent: View {
                     RoundedRectangle(cornerRadius: iconSize * 0.18)
                         .foregroundStyle(Color.clear)
                         .frame(width: iconSize * 0.8, height: iconSize * 0.8)
-                        .glassEffect(in: RoundedRectangle(cornerRadius: iconSize * 0.18))
+                        .liquidGlass(in: RoundedRectangle(cornerRadius: iconSize * 0.18))
                         .shadow(color: .black.opacity(0.12), radius: 1, x: 0, y: 0.5)
                 }
 

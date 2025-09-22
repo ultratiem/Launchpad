@@ -1,6 +1,6 @@
 # LaunchNext
 
-**Languages**: [English](README.md) | [中文](i18n/README.zh.md) | [日本語](i18n/README.ja.md) | [Français](i18n/README.fr.md) | [Español](i18n/README.es.md) | [Deutsch](i18n/README.de.md) | [Русский](i18n/README.ru.md) | [हिन्दी](i18n/README.hi.md)
+**Languages**: [English](README.md) | [中文](i18n/README.zh.md) | [日本語](i18n/README.ja.md) | [한국어](i18n/README.ko.md) | [Français](i18n/README.fr.md) | [Español](i18n/README.es.md) | [Deutsch](i18n/README.de.md) | [Русский](i18n/README.ru.md) | [हिन्दी](i18n/README.hi.md) | [Tiếng Việt](i18n/README.vi.md)
 
 ## 📥 Download
 
@@ -18,6 +18,12 @@ MacOS Tahoe removed launchpad,and it's so hard to use, it's doesn't use your Bio
 *Built upon [LaunchNow](https://github.com/ggkevinnnn/LaunchNow) by ggkevinnnn - huge thanks to the original project! I hope this enhanced version can be merged back to the original repository*
 
 *LaunchNow has chosen the GPL 3 license. LaunchNext follows the same licensing terms.*
+
+⚠️ **If macOS blocks the app, run this in Terminal:**
+```bash
+sudo xattr -r -d com.apple.quarantine /Applications/LaunchNext.app
+```
+**Why**: I can't afford Apple's developer certificate ($99/year), so macOS blocks unsigned apps. This command removes the quarantine flag to let it run. **Only use this command on apps you trust.**
 
 ### What LaunchNext Delivers
 - ✅ **One-click import from old system Launchpad** - directly reads your native Launchpad SQLite database (`/private$(getconf DARWIN_USER_DIR)com.apple.dock.launchpad/db/db`) to perfectly recreate your existing folders, app positions, and layout

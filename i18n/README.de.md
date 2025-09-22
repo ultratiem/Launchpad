@@ -1,6 +1,6 @@
 # LaunchNext
 
-**Sprachen**: [English](../README.md) | [中文](README.zh.md) | [日本語](README.ja.md) | [Français](README.fr.md) | [Español](README.es.md) | [Deutsch](README.de.md) | [Русский](README.ru.md) | [हिन्दी](README.hi.md)
+**Sprachen**: [English](../README.md) | [中文](README.zh.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Français](README.fr.md) | [Español](README.es.md) | [Deutsch](README.de.md) | [Русский](README.ru.md) | [हिन्दी](README.hi.md) | [Tiếng Việt](README.vi.md)
 
 ## 📥 Download
 
@@ -18,6 +18,12 @@ macOS Tahoe hat das Launchpad entfernt, und es ist so schwer zu bedienen, es nut
 *Basierend auf [LaunchNow](https://github.com/ggkevinnnn/LaunchNow) von ggkevinnnn - vielen Dank an das ursprüngliche Projekt! Ich hoffe, diese erweiterte Version kann in das ursprüngliche Repository zurückgeführt werden*
 
 *LaunchNow hat die GPL 3 Lizenz gewählt. LaunchNext folgt denselben Lizenzbedingungen.*
+
+⚠️ **Wenn macOS die App blockiert, führen Sie dies im Terminal aus:**
+```bash
+sudo xattr -r -d com.apple.quarantine /Applications/LaunchNext.app
+```
+**Warum**: Ich kann mir Apples Entwicklerzertifikat nicht leisten ($99/Jahr), daher blockiert macOS unsignierte Apps. Dieser Befehl entfernt das Quarantäne-Flag, damit die App ausgeführt werden kann. **Verwenden Sie diesen Befehl nur bei vertrauenswürdigen Apps.**
 
 ### Was LaunchNext bietet
 - ✅ **Ein-Klick-Import vom alten System-Launchpad** - liest direkt Ihre native Launchpad SQLite-Datenbank (`/private$(getconf DARWIN_USER_DIR)com.apple.dock.launchpad/db/db`) um Ihre bestehenden Ordner, App-Positionen und Layout perfekt zu recreieren

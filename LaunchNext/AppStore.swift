@@ -39,6 +39,7 @@ enum AppearancePreference: String, CaseIterable, Identifiable {
     }
 }
 
+
 private struct GitHubRelease: Decodable {
     let tagName: String
     let htmlUrl: URL
@@ -90,7 +91,22 @@ final class AppStore: ObservableObject {
         let notes: String?
     }
 
+    enum BackgroundStyle: String, CaseIterable, Identifiable {
+        case blur
+        case glass
+
+        var id: String { rawValue }
+
+        var localizationKey: LocalizationKey {
+            switch self {
+            case .blur: return .backgroundStyleOptionBlur
+            case .glass: return .backgroundStyleOptionGlass
+            }
+        }
+    }
+
     private static let customTitlesKey = "customAppTitles"
+    private static let hiddenAppsKey = "hiddenAppBundlePaths"
     private static let gridColumnsKey = "gridColumnsPerPage"
     private static let gridRowsKey = "gridRowsPerPage"
     private static let columnSpacingKey = "gridColumnSpacing"
@@ -102,6 +118,22 @@ final class AppStore: ObservableObject {
     private static let hoverMagnificationScaleKey = "hoverMagnificationScale"
     private static let activePressEffectKey = "enableActivePressEffect"
     private static let activePressScaleKey = "activePressScale"
+    private static let backgroundStyleKey = "launchpadBackgroundStyle"
+
+    private static func loadHiddenApps() -> Set<String> {
+        if let array = UserDefaults.standard.array(forKey: hiddenAppsKey) as? [String] {
+            return Set(array)
+        }
+        return []
+    }
+
+    private static func loadBackgroundStyle() -> BackgroundStyle {
+        if let raw = UserDefaults.standard.string(forKey: backgroundStyleKey),
+           let style = BackgroundStyle(rawValue: raw) {
+            return style
+        }
+        return .glass
+    }
 
     private static let minColumnsPerPage = 4
     private static let maxColumnsPerPage = 10
@@ -238,6 +270,28 @@ final class AppStore: ObservableObject {
     @Published var apps: [AppInfo] = []
     @Published var folders: [FolderInfo] = []
     @Published var items: [LaunchpadItem] = []
+    @Published private(set) var hiddenAppPaths: Set<String> = AppStore.loadHiddenApps()
+
+    private func persistHiddenApps(_ set: Set<String>) {
+        let array = Array(set).sorted()
+        UserDefaults.standard.set(array, forKey: Self.hiddenAppsKey)
+    }
+
+    private func updateHiddenAppPaths(_ changes: (inout Set<String>) -> Void) {
+        var updated = hiddenAppPaths
+        let original = updated
+        changes(&updated)
+        guard updated != original else { return }
+        hiddenAppPaths = updated
+        persistHiddenApps(updated)
+    }
+
+    @Published var launchpadBackgroundStyle: BackgroundStyle = AppStore.loadBackgroundStyle() {
+        didSet {
+            guard launchpadBackgroundStyle != oldValue else { return }
+            UserDefaults.standard.set(launchpadBackgroundStyle.rawValue, forKey: Self.backgroundStyleKey)
+        }
+    }
     @Published var isSetting = false
     @Published var isInitialLoading = true
     @Published var currentPage = 0 {
@@ -693,11 +747,11 @@ final class AppStore: ObservableObject {
         let fallbackIcon = (NSApplication.shared.applicationIconImage?.copy() as? NSImage) ?? NSImage(size: NSSize(width: 512, height: 512))
         self.defaultAppIcon = fallbackIcon
         if let storedIcon = AppStore.loadStoredAppIcon(from: customIconFileURL) {
-            self.currentAppIcon = storedIcon
             self.hasCustomAppIcon = true
+            self.currentAppIcon = storedIcon
         } else {
-            self.currentAppIcon = fallbackIcon
             self.hasCustomAppIcon = false
+            self.currentAppIcon = fallbackIcon
         }
         applyCurrentAppIcon()
 
@@ -860,11 +914,12 @@ final class AppStore: ObservableObject {
             let sorted = found.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
             DispatchQueue.main.async {
                 self.apps = sorted
+                self.pruneHiddenAppsFromAppList()
                 if loadPersistedOrder {
                     self.rebuildItems()
                     self.loadAllOrder()
                 } else {
-                    self.items = sorted.map { .app($0) }
+                    self.items = self.filteredItemsRemovingHidden(from: sorted.map { .app($0) })
                     self.saveAllOrder()
                 }
                 
@@ -1010,6 +1065,7 @@ final class AppStore: ObservableObject {
 
         // 更新应用列表
         self.apps = updatedApps
+        pruneHiddenAppsFromAppList()
         
         // 第四步：智能重建项目列表，保持用户排序
         self.smartRebuildItemsWithOrderPreservation(currentItems: currentItems, newApps: newAppsToAdd)
@@ -1126,7 +1182,7 @@ final class AppStore: ObservableObject {
             }
         }
         
-        self.items = newItems
+        self.items = filteredItemsRemovingHidden(from: newItems)
     }
     
     /// 智能重建项目列表，保持用户排序
@@ -1251,7 +1307,7 @@ final class AppStore: ObservableObject {
             }
         }
         
-        self.items = newItems
+        self.items = filteredItemsRemovingHidden(from: newItems)
 
     }
     
@@ -1296,7 +1352,7 @@ final class AppStore: ObservableObject {
             }
         }
         
-        self.items = newItems
+        self.items = filteredItemsRemovingHidden(from: newItems)
     }
     
     /// 只加载文件夹信息，不重建项目顺序
@@ -1332,7 +1388,7 @@ final class AppStore: ObservableObject {
                     foldersInOrder.append(folder)
                 }
                 
-                self.folders = foldersInOrder
+                self.folders = self.sanitizedFolders(foldersInOrder)
             }
         } catch {
         }
@@ -1606,7 +1662,7 @@ final class AppStore: ObservableObject {
         } else {
             newItems[safeIndex] = .folder(folder)
         }
-        self.items = newItems
+        self.items = filteredItemsRemovingHidden(from: newItems)
         // 单页内自动补位：将该页内的空槽移到页尾
         compactItemsWithinPages()
 
@@ -1817,7 +1873,7 @@ final class AppStore: ObservableObject {
             
             index = end
         }
-        items = result
+        items = filteredItemsRemovingHidden(from: result)
     }
 
     // MARK: - 跨页拖拽：级联插入（满页则将最后一个推入下一页）
@@ -1831,7 +1887,7 @@ final class AppStore: ObservableObject {
         result[source] = .empty(UUID().uuidString)
         // 执行级联插入
         result = cascadeInsert(into: result, item: item, at: targetIndex)
-        items = result
+        items = filteredItemsRemovingHidden(from: result)
         
         // 每次拖拽结束后都进行压缩，确保每页的empty项目移动到页面末尾
         let targetPage = targetIndex / itemsPerPage
@@ -1949,7 +2005,7 @@ final class AppStore: ObservableObject {
 
         // 只有在实际变化时才更新items
         if newItems.count != items.count || !newItems.elementsEqual(items, by: { $0.id == $1.id }) {
-            items = newItems
+            items = filteredItemsRemovingHidden(from: newItems)
         }
     }
     
@@ -2034,13 +2090,14 @@ final class AppStore: ObservableObject {
             }
 
             DispatchQueue.main.async {
-                self.folders = foldersInOrder
+                self.folders = self.sanitizedFolders(foldersInOrder)
                 if !combined.isEmpty {
-                    self.items = combined
+                    self.items = self.filteredItemsRemovingHidden(from: combined)
                     // 如果应用列表为空，从持久化数据中恢复应用列表
                     if self.apps.isEmpty {
                         let freeApps: [AppInfo] = combined.compactMap { if case let .app(a) = $0 { return a } else { return nil } }
                         self.apps = freeApps
+                        self.pruneHiddenAppsFromAppList()
                     }
                 }
                 self.hasAppliedOrderFromStore = true
@@ -2093,13 +2150,14 @@ final class AppStore: ObservableObject {
             combined.append(contentsOf: missingFreeApps)
 
             DispatchQueue.main.async {
-                self.folders = foldersInOrder
+                self.folders = self.sanitizedFolders(foldersInOrder)
                 if !combined.isEmpty {
-                    self.items = combined
+                    self.items = self.filteredItemsRemovingHidden(from: combined)
                     // 如果应用列表为空，从持久化数据中恢复应用列表
                     if self.apps.isEmpty {
                         let freeAppsAfterLoad: [AppInfo] = combined.compactMap { if case let .app(a) = $0 { return a } else { return nil } }
                         self.apps = freeAppsAfterLoad
+                        self.pruneHiddenAppsFromAppList()
                     }
                 }
                 self.hasAppliedOrderFromStore = true
@@ -2302,7 +2360,7 @@ final class AppStore: ObservableObject {
         
         // 只有在实际删除了空白页面时才更新items
         if newItems.count != items.count {
-            items = newItems
+            items = filteredItemsRemovingHidden(from: newItems)
             
             // 删除空白页面后，确保当前页索引在有效范围内
             let maxPageIndex = max(0, (items.count - 1) / itemsPerPage)
@@ -2531,6 +2589,154 @@ final class AppStore: ObservableObject {
         LocalizationManager.shared.languageDisplayName(for: language, displayLanguage: resolvedLanguage)
     }
 
+    // MARK: - Hidden Apps
+
+    @discardableResult
+    func hideApp(_ app: AppInfo) -> Bool {
+        hideApp(atPath: app.url.path)
+    }
+
+    @discardableResult
+    func hideApp(at url: URL) -> Bool {
+        let resolved = url.resolvingSymlinksInPath()
+        guard resolved.pathExtension.caseInsensitiveCompare("app") == .orderedSame else { return false }
+        guard FileManager.default.fileExists(atPath: resolved.path) else { return false }
+        return hideApp(atPath: resolved.path)
+    }
+
+    @discardableResult
+    func hideApp(atPath path: String) -> Bool {
+        var didInsert = false
+        updateHiddenAppPaths { set in
+            if !set.contains(path) {
+                set.insert(path)
+                didInsert = true
+            }
+        }
+        guard didInsert else { return false }
+
+        removeHiddenAppMetadata(forPath: path)
+        items = filteredItemsRemovingHidden(from: items)
+        folders = sanitizedFolders(folders)
+        applyHiddenFilteringToOpenFolder()
+        compactItemsWithinPages()
+        removeEmptyPages()
+        triggerFolderUpdate()
+        triggerGridRefresh()
+        updateCacheAfterChanges()
+        saveAllOrder()
+        return true
+    }
+
+    func unhideApp(path: String) {
+        var didRemove = false
+        updateHiddenAppPaths { set in
+            if set.remove(path) != nil {
+                didRemove = true
+            }
+        }
+        guard didRemove else { return }
+
+        guard FileManager.default.fileExists(atPath: path) else {
+            triggerFolderUpdate()
+            triggerGridRefresh()
+            return
+        }
+
+        let url = URL(fileURLWithPath: path)
+        let info = appInfo(from: url)
+        if !apps.contains(info) {
+            apps.append(info)
+            apps.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        }
+
+        rebuildItems()
+        folders = sanitizedFolders(folders)
+        applyHiddenFilteringToOpenFolder()
+        compactItemsWithinPages()
+        triggerFolderUpdate()
+        triggerGridRefresh()
+        updateCacheAfterChanges()
+        saveAllOrder()
+    }
+
+    private func removeHiddenAppMetadata(forPath path: String) {
+        if let index = apps.firstIndex(where: { $0.url.path == path }) {
+            apps.remove(at: index)
+        }
+    }
+
+    private func pruneHiddenAppsFromAppList() {
+        guard !hiddenAppPaths.isEmpty else { return }
+        apps.removeAll { hiddenAppPaths.contains($0.url.path) }
+    }
+
+    private func applyHiddenFilteringToOpenFolder() {
+        guard let folder = openFolder else { return }
+        let filtered = filteredFolderRemovingHidden(from: folder)
+        if filtered.apps.count != folder.apps.count {
+            openFolder = filtered
+        }
+    }
+
+    private func sanitizedFolders(_ input: [FolderInfo]) -> [FolderInfo] {
+        guard !hiddenAppPaths.isEmpty else { return input }
+        let hidden = hiddenAppPaths
+        var result: [FolderInfo] = []
+        result.reserveCapacity(input.count)
+        var didChange = false
+        for folder in input {
+            let filtered = filteredFolderRemovingHidden(from: folder, hidden: hidden)
+            if filtered.apps.count != folder.apps.count {
+                didChange = true
+            }
+            result.append(filtered)
+        }
+        return didChange ? result : input
+    }
+
+    private func filteredItemsRemovingHidden(from input: [LaunchpadItem]) -> [LaunchpadItem] {
+        guard !hiddenAppPaths.isEmpty else { return input }
+        let hidden = hiddenAppPaths
+        var result: [LaunchpadItem] = []
+        result.reserveCapacity(input.count)
+        var didChange = false
+        for item in input {
+            switch item {
+            case .app(let app):
+                if hidden.contains(app.url.path) {
+                    didChange = true
+                    continue
+                }
+                result.append(.app(app))
+            case .folder(let folder):
+                let filteredFolder = filteredFolderRemovingHidden(from: folder, hidden: hidden)
+                if filteredFolder.apps.count != folder.apps.count {
+                    didChange = true
+                }
+                result.append(.folder(filteredFolder))
+            case .empty:
+                result.append(item)
+            }
+        }
+        return didChange ? result : input
+    }
+
+    private func filteredFolderRemovingHidden(from folder: FolderInfo) -> FolderInfo {
+        filteredFolderRemovingHidden(from: folder, hidden: hiddenAppPaths)
+    }
+
+    private func filteredFolderRemovingHidden(from folder: FolderInfo, hidden: Set<String>) -> FolderInfo {
+        guard !hidden.isEmpty else { return folder }
+        let filteredApps = folder.apps.filter { !hidden.contains($0.url.path) }
+        if filteredApps.count == folder.apps.count {
+            return folder
+        }
+        var copy = folder
+        copy.apps = filteredApps
+        return copy
+    }
+
     // MARK: - Custom Titles
 
     func customTitle(for app: AppInfo) -> String {
@@ -2676,8 +2882,8 @@ final class AppStore: ObservableObject {
         }
         do {
             try data.write(to: customIconFileURL, options: .atomic)
-            currentAppIcon = normalized
             hasCustomAppIcon = true
+            currentAppIcon = normalized
             return true
         } catch {
             return false
@@ -2686,14 +2892,32 @@ final class AppStore: ObservableObject {
 
     func resetCustomAppIcon() {
         try? FileManager.default.removeItem(at: customIconFileURL)
-        currentAppIcon = defaultAppIcon
         hasCustomAppIcon = false
+        currentAppIcon = defaultAppIcon
     }
 
     private func applyCurrentAppIcon() {
         let icon = currentAppIcon
+        let bundlePath = Bundle.main.bundlePath
+        let hasCustomIconFile = FileManager.default.fileExists(atPath: customIconFileURL.path)
         DispatchQueue.main.async {
-            NSApplication.shared.applicationIconImage = icon
+            let application = NSApplication.shared
+            application.applicationIconImage = icon
+            application.dockTile.display()
+
+            let workspace = NSWorkspace.shared
+            let success: Bool
+            if hasCustomIconFile {
+                success = workspace.setIcon(icon, forFile: bundlePath, options: [])
+            } else {
+                success = workspace.setIcon(nil, forFile: bundlePath, options: [])
+            }
+
+            if success {
+                workspace.noteFileSystemChanged(bundlePath)
+            } else {
+                NSLog("LaunchNext: Failed to update application bundle icon at %@", bundlePath)
+            }
         }
     }
 
@@ -3021,8 +3245,8 @@ final class AppStore: ObservableObject {
         DispatchQueue.main.async {
             
             // 设置新的数据
-            self.folders = importedFolders
-            self.items = newItems
+            self.folders = self.sanitizedFolders(importedFolders)
+            self.items = self.filteredItemsRemovingHidden(from: newItems)
             
             
             // 强制触发界面更新

@@ -1,6 +1,6 @@
 # LaunchNext
 
-**语言**: [English](../README.md) | [中文](README.zh.md) | [日本語](README.ja.md) | [Français](README.fr.md) | [Español](README.es.md) | [Deutsch](README.de.md) | [Русский](README.ru.md) | [हिन्दी](README.hi.md)
+**语言**: [English](../README.md) | [中文](README.zh.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Français](README.fr.md) | [Español](README.es.md) | [Deutsch](README.de.md) | [Русский](README.ru.md) | [हिन्दी](README.hi.md) | [Tiếng Việt](README.vi.md)
 
 ## 📥 下载
 
@@ -18,6 +18,12 @@ macOS Tahoe 移除了 Launchpad，新的界面很难用，也不能充分利用�
 *基于 [LaunchNow](https://github.com/ggkevinnnn/LaunchNow) (作者 ggkevinnnn) 开发 - 非常感谢原项目！希望这个增强版本能合并回原仓库*
 
 *LaunchNow 选择了 GPL 3 许可证，LaunchNext 遵循相同的许可条款。*
+
+⚠️ **如果 macOS 阻止应用运行，请在终端执行：**
+```bash
+sudo xattr -r -d com.apple.quarantine /Applications/LaunchNext.app
+```
+**原因**：我买不起苹果的开发者证书（$99/年），所以 macOS 会阻止未签名应用。这个命令移除隔离标记让应用正常运行。**仅对信任的应用使用此命令。**
 
 ### LaunchNext 提供的功能
 - ✅ **一键导入老系统 Launchpad** - 直接读取你的原生 Launchpad SQLite 数据库 (`/private$(getconf DARWIN_USER_DIR)com.apple.dock.launchpad/db/db`) 完美重现你现有的文件夹、应用位置和布局

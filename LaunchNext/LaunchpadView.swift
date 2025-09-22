@@ -77,6 +77,20 @@ private final class FPSMonitor {
     }
 }
 
+private extension View {
+    @ViewBuilder
+    func launchpadBackgroundStyle(_ style: AppStore.BackgroundStyle,
+                                  cornerRadius: CGFloat) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        switch style {
+        case .glass:
+            self.liquidGlass(in: shape)
+        case .blur:
+            self.background(.ultraThinMaterial, in: shape)
+        }
+    }
+}
+
 struct LaunchpadView: View {
     @ObservedObject var appStore: AppStore
     @Environment(\.colorScheme) private var colorScheme
@@ -257,7 +271,7 @@ struct LaunchpadView: View {
                     }
                     .padding(.vertical, 8)
                     .padding(.horizontal, 12)
-                    .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .liquidGlass(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
@@ -520,7 +534,8 @@ struct LaunchpadView: View {
             .padding(.horizontal, actualHorizontalPadding)
         }
         .padding()
-        .glassEffect(in: RoundedRectangle(cornerRadius: appStore.isFullscreenMode ? 0 : 30))
+        .launchpadBackgroundStyle(appStore.launchpadBackgroundStyle,
+                                   cornerRadius: appStore.isFullscreenMode ? 0 : 30)
         .background(
             appStore.isFullscreenMode
                 ? Color.black.opacity(backdropOpacity)
@@ -2011,7 +2026,7 @@ struct DragPreviewItem: View {
                     RoundedRectangle(cornerRadius: iconSize * 0.2)
                         .foregroundStyle(Color.clear)
                         .frame(width: iconSize * 0.8, height: iconSize * 0.8)
-                        .glassEffect(in: RoundedRectangle(cornerRadius: iconSize * 0.2))
+                        .liquidGlass(in: RoundedRectangle(cornerRadius: iconSize * 0.2))
                         .shadow(radius: 2)
                         .overlay(
                             RoundedRectangle(cornerRadius: iconSize * 0.2)

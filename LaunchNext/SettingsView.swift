@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var showResetConfirm = false
     @State private var selectedSection: SettingsSection = .general
     @State private var titleSearch: String = ""
+    @State private var hiddenSearch: String = ""
     @State private var editingDrafts: [String: String] = [:]
     @State private var editingEntries: Set<String> = []
     @State private var iconImportError: String? = nil
@@ -43,7 +44,7 @@ struct SettingsView: View {
                                         .foregroundStyle(.white)
                                 )
                                 .frame(width: 24, height: 24)
-                                .glassEffect()
+                                .liquidGlass()
 
                             Text(appStore.localized(section.localizationKey))
                                 .font(.callout.weight(.medium))
@@ -73,7 +74,7 @@ struct SettingsView: View {
                     .background(
                         Circle()
                             .fill(.ultraThinMaterial)
-                            .glassEffect()
+                            .liquidGlass()
                     )
             }
             .buttonStyle(.plain)
@@ -100,7 +101,9 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
     case appearance
     case performance
     case titles
+    case hiddenApps
     case development
+    case accessibility
     case about
 
     var id: String { rawValue }
@@ -111,7 +114,9 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         case .appearance: return "paintbrush"
         case .performance: return "speedometer"
         case .titles: return "text.badge.plus"
+        case .hiddenApps: return "eye.slash"
         case .development: return "hammer"
+        case .accessibility: return "figure.wave.circle"
         case .about: return "info.circle"
         }
     }
@@ -127,8 +132,12 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
             colors = [Color(red: 0.02, green: 0.70, blue: 0.46), Color(red: 0.31, green: 0.93, blue: 0.69)]
         case .titles:
             colors = [Color(red: 0.95, green: 0.37, blue: 0.32), Color(red: 0.98, green: 0.55, blue: 0.44)]
+        case .hiddenApps:
+            colors = [Color(red: 0.29, green: 0.39, blue: 0.96), Color(red: 0.11, green: 0.67, blue: 0.91)]
         case .development:
             colors = [Color(red: 0.98, green: 0.58, blue: 0.16), Color(red: 0.96, green: 0.20, blue: 0.24)]
+        case .accessibility:
+            colors = [Color(red: 0.28, green: 0.66, blue: 0.99), Color(red: 0.23, green: 0.82, blue: 0.68)]
         case .about:
             colors = [Color(red: 0.54, green: 0.55, blue: 0.70), Color(red: 0.42, green: 0.44, blue: 0.60)]
         }
@@ -141,7 +150,9 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         case .appearance: return .settingsSectionAppearance
         case .performance: return .settingsSectionPerformance
         case .titles: return .settingsSectionTitles
+        case .hiddenApps: return .settingsSectionHiddenApps
         case .development: return .settingsSectionDevelopment
+        case .accessibility: return .settingsSectionAccessibility
         case .about: return .settingsSectionAbout
         }
     }
@@ -193,15 +204,36 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
             generalSection
         case .appearance:
             appearanceSection
-        case .titles:
-            titlesSection
         case .performance:
             performanceSection
+        case .titles:
+            titlesSection
+        case .hiddenApps:
+            hiddenAppsSection
         case .development:
             developmentSection
+        case .accessibility:
+            accessibilitySection
         case .about:
             aboutSection
         }
+    }
+
+    private var accessibilitySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(appStore.localized(.accessibilityPlaceholderTitle))
+                .font(.headline)
+                .foregroundStyle(.white)
+            Text(appStore.localized(.accessibilityPlaceholderSubtitle))
+                .font(.footnote)
+                .foregroundStyle(Color.white.opacity(0.8))
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(red: 0.17, green: 0.36, blue: 0.9))
+        )
     }
 
     private var developmentSection: some View {
@@ -277,6 +309,129 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         }
     }
 
+    private var hiddenAppsSection: some View {
+        let entries = hiddenAppEntries
+        return VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Button {
+                    presentHiddenAppPicker()
+                } label: {
+                    Label(appStore.localized(.hiddenAppsAddButton), systemImage: "eye.slash")
+                }
+                Spacer()
+            }
+
+            if entries.isEmpty {
+                hiddenAppsEmptyState
+            } else {
+                Text(appStore.localized(.hiddenAppsHint))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
+                TextField("", text: $hiddenSearch, prompt: Text(appStore.localized(.hiddenAppsSearchPlaceholder)))
+                    .textFieldStyle(.roundedBorder)
+
+                let filtered = filteredHiddenAppEntries
+                if filtered.isEmpty {
+                    Text(appStore.localized(.customTitleNoResults))
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, minHeight: 120, alignment: .center)
+                } else {
+                    VStack(spacing: 12) {
+                        ForEach(filtered) { entry in
+                            hiddenAppRow(for: entry)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var hiddenAppEntries: [HiddenAppEntry] {
+        appStore.hiddenAppPaths
+            .map { path in
+                let info = appStore.appInfoForCustomTitle(path: path)
+                let defaultName = appStore.defaultDisplayName(for: path)
+                return HiddenAppEntry(id: path, appInfo: info, defaultName: defaultName)
+            }
+            .sorted { lhs, rhs in
+                lhs.appInfo.name.localizedCaseInsensitiveCompare(rhs.appInfo.name) == .orderedAscending
+            }
+    }
+
+    private var filteredHiddenAppEntries: [HiddenAppEntry] {
+        let base = hiddenAppEntries
+        let trimmed = hiddenSearch.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return base }
+        let query = trimmed.lowercased()
+        return base.filter { entry in
+            if entry.appInfo.name.lowercased().contains(query) { return true }
+            if entry.defaultName.lowercased().contains(query) { return true }
+            if entry.id.lowercased().contains(query) { return true }
+            return false
+        }
+    }
+
+    private var hiddenAppsEmptyState: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(appStore.localized(.hiddenAppsEmptyTitle))
+                .font(.headline)
+            Text(appStore.localized(.hiddenAppsEmptySubtitle))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            Button {
+                presentHiddenAppPicker()
+            } label: {
+                Label(appStore.localized(.hiddenAppsAddButton), systemImage: "eye.slash")
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .liquidGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    private func hiddenAppRow(for entry: HiddenAppEntry) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(nsImage: entry.appInfo.icon)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 40, height: 40)
+                .cornerRadius(10)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(entry.appInfo.name)
+                    .font(.callout.weight(.semibold))
+                Text(entry.defaultName)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(entry.id)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            Button {
+                appStore.unhideApp(path: entry.id)
+            } label: {
+                Text(appStore.localized(.hiddenAppsRemoveButton))
+            }
+            .buttonStyle(.bordered)
+        }
+        .padding(14)
+        .liquidGlass(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private struct HiddenAppEntry: Identifiable {
+        let id: String
+        let appInfo: AppInfo
+        let defaultName: String
+    }
+
     private var customTitleEntries: [CustomTitleEntry] {
         appStore.customTitles
             .map { (path, _) in
@@ -319,7 +474,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .liquidGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
     @ViewBuilder
@@ -396,8 +551,24 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
             }
         }
         .padding(14)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .liquidGlass(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func presentHiddenAppPicker() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.applicationBundle]
+        panel.prompt = appStore.localized(.hiddenAppsAddButton)
+        panel.title = appStore.localized(.hiddenAppsAddButton)
+
+        if panel.runModal() == .OK, let url = panel.url {
+            if !appStore.hideApp(at: url) {
+                NSSound.beep()
+            }
+        }
     }
 
     private func presentCustomTitlePicker() {
@@ -853,6 +1024,17 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
                     Toggle("", isOn: $appStore.enableActivePressEffect)
                         .labelsHidden()
                         .toggleStyle(.switch)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(appStore.localized(.backgroundStyleTitle))
+                        .font(.headline)
+                    Picker(appStore.localized(.backgroundStyleTitle), selection: $appStore.launchpadBackgroundStyle) {
+                        ForEach(AppStore.BackgroundStyle.allCases) { style in
+                            Text(appStore.localized(style.localizationKey)).tag(style)
+                        }
+                    }
+                    .pickerStyle(.segmented)
                 }
             }
 
