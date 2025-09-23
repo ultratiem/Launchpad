@@ -112,7 +112,7 @@ Reads directly from the system Launchpad database:
 1. **Clone the repository**
    ```bash
    git clone https://github.com/yourusername/LaunchNext.git
-   cd LaunchNext/LaunchNext
+   cd LaunchNext
    ```
 
 2. **Open in Xcode**
