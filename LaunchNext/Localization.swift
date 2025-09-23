@@ -806,7 +806,7 @@ final class LocalizationManager {
                 .iconHorizontalSpacing: "Espacement horizontal",
                 .iconVerticalSpacing: "Espacement vertical",
                 .labelFontSize: "Taille de la police des noms des applications",
-                .iconLabelFontWeight: "Épaisseur du texte d’icône",
+                .iconLabelFontWeight: "Épaisseur du texte des icônes",
                 .smaller: "Petites",
                 .larger: "Grandes",
                 .predictDrop: "Prédire la position de placement",
