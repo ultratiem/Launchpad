@@ -105,12 +105,43 @@ final class AppStore: ObservableObject {
         }
     }
 
+    enum IconLabelFontWeightOption: String, CaseIterable, Identifiable {
+        case light
+        case regular
+        case medium
+        case semibold
+        case bold
+
+        var id: String { rawValue }
+
+        var fontWeight: Font.Weight {
+            switch self {
+            case .light: return .light
+            case .regular: return .regular
+            case .medium: return .medium
+            case .semibold: return .semibold
+            case .bold: return .bold
+            }
+        }
+
+        var displayName: String {
+            switch self {
+            case .light: return "Light"
+            case .regular: return "Regular"
+            case .medium: return "Medium"
+            case .semibold: return "Semibold"
+            case .bold: return "Bold"
+            }
+        }
+    }
+
     private static let customTitlesKey = "customAppTitles"
     private static let hiddenAppsKey = "hiddenAppBundlePaths"
     private static let gridColumnsKey = "gridColumnsPerPage"
     private static let gridRowsKey = "gridRowsPerPage"
     private static let columnSpacingKey = "gridColumnSpacing"
     private static let rowSpacingKey = "gridRowSpacing"
+    private static let iconLabelFontWeightKey = "iconLabelFontWeight"
     private static let rememberPageKey = "rememberLastPage"
     private static let rememberedPageIndexKey = "rememberedPageIndex"
     private static let globalHotKeyKey = "globalHotKeyConfiguration"
@@ -487,6 +518,25 @@ final class AppStore: ObservableObject {
         }
     }
 
+    @Published var iconLabelFontWeight: IconLabelFontWeightOption = {
+        let defaults = UserDefaults.standard
+        if let raw = defaults.string(forKey: AppStore.iconLabelFontWeightKey),
+           let value = IconLabelFontWeightOption(rawValue: raw) {
+            return value
+        }
+        return .medium
+    }() {
+        didSet {
+            guard iconLabelFontWeight != oldValue else { return }
+            UserDefaults.standard.set(iconLabelFontWeight.rawValue, forKey: AppStore.iconLabelFontWeightKey)
+            triggerGridRefresh()
+        }
+    }
+
+    var iconLabelFontWeightValue: Font.Weight {
+        iconLabelFontWeight.fontWeight
+    }
+
     // 更新检查相关属性
     @Published var updateState: UpdateState = .idle
 
@@ -728,6 +778,9 @@ final class AppStore: ObservableObject {
         }
         if UserDefaults.standard.object(forKey: "iconLabelFontSize") == nil {
             UserDefaults.standard.set(11.0, forKey: "iconLabelFontSize")
+        }
+        if UserDefaults.standard.object(forKey: AppStore.iconLabelFontWeightKey) == nil {
+            UserDefaults.standard.set(IconLabelFontWeightOption.medium.rawValue, forKey: AppStore.iconLabelFontWeightKey)
         }
         if UserDefaults.standard.object(forKey: "animationDuration") == nil {
             UserDefaults.standard.set(0.3, forKey: "animationDuration")

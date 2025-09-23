@@ -44,6 +44,7 @@ enum LocalizationKey: String {
     case iconHorizontalSpacing
     case iconVerticalSpacing
     case labelFontSize
+    case iconLabelFontWeight
     case pageIndicatorHint
     case rememberPageTitle
     case globalShortcutTitle
@@ -218,6 +219,7 @@ final class LocalizationManager {
                 .iconHorizontalSpacing: "Horizontal spacing",
                 .iconVerticalSpacing: "Vertical spacing",
                 .labelFontSize: "Label font size",
+                .iconLabelFontWeight: "Icon label weight",
                 .smaller: "Smaller",
                 .larger: "Larger",
                 .predictDrop: "Predict drop position",
@@ -335,6 +337,7 @@ final class LocalizationManager {
                 .iconHorizontalSpacing: "Khoảng cách ngang",
                 .iconVerticalSpacing: "Khoảng cách dọc",
                 .labelFontSize: "Cỡ chữ nhãn",
+                .iconLabelFontWeight: "Độ đậm nhãn biểu tượng",
                 .smaller: "Nhỏ hơn",
                 .larger: "Lớn hơn",
                 .predictDrop: "Dự đoán vị trí thả",
@@ -449,6 +452,7 @@ final class LocalizationManager {
                 .iconHorizontalSpacing: "横向间距",
                 .iconVerticalSpacing: "纵向间距",
                 .labelFontSize: "标签字体大小",
+                .iconLabelFontWeight: "图标文字粗细",
                 .smaller: "更小",
                 .larger: "更大",
                 .predictDrop: "启用落点预判",
@@ -566,6 +570,7 @@ final class LocalizationManager {
                 .iconHorizontalSpacing: "横方向の間隔",
                 .iconVerticalSpacing: "縦方向の間隔",
                 .labelFontSize: "ラベルの文字サイズ",
+                .iconLabelFontWeight: "アイコンラベルの太さ",
                 .smaller: "小さく",
                 .larger: "大きく",
                 .predictDrop: "ドロップ位置を予測",
@@ -683,6 +688,7 @@ final class LocalizationManager {
                 .iconHorizontalSpacing: "가로 간격",
                 .iconVerticalSpacing: "세로 간격",
                 .labelFontSize: "레이블 글자 크기",
+                .iconLabelFontWeight: "아이콘 라벨 두께",
                 .smaller: "작게",
                 .larger: "크게",
                 .predictDrop: "놓을 위치 예측",
@@ -800,6 +806,7 @@ final class LocalizationManager {
                 .iconHorizontalSpacing: "Espacement horizontal",
                 .iconVerticalSpacing: "Espacement vertical",
                 .labelFontSize: "Taille de la police des noms des applications",
+                .iconLabelFontWeight: "Épaisseur du texte d’icône",
                 .smaller: "Petites",
                 .larger: "Grandes",
                 .predictDrop: "Prédire la position de placement",
@@ -916,6 +923,7 @@ final class LocalizationManager {
                 .iconHorizontalSpacing: "Espaciado horizontal",
                 .iconVerticalSpacing: "Espaciado vertical",
                 .labelFontSize: "Tamaño de fuente de las etiquetas",
+                .iconLabelFontWeight: "Grosor del texto del icono",
                 .smaller: "Más pequeño",
                 .larger: "Más grande",
                 .predictDrop: "Predecir posición de caída",
@@ -1032,6 +1040,7 @@ final class LocalizationManager {
                 .iconHorizontalSpacing: "Horizontaler Abstand",
                 .iconVerticalSpacing: "Vertikaler Abstand",
                 .labelFontSize: "Schriftgröße der Beschriftung",
+                .iconLabelFontWeight: "Schriftstärke der Symbolbeschriftung",
                 .smaller: "Kleiner",
                 .larger: "Größer",
                 .predictDrop: "Ablageposition vorhersagen",
@@ -1149,6 +1158,7 @@ final class LocalizationManager {
                 .iconHorizontalSpacing: "Горизонтальный промежуток",
                 .iconVerticalSpacing: "Вертикальный промежуток",
                 .labelFontSize: "Размер шрифта подписи",
+                .iconLabelFontWeight: "Толщина шрифта подписи значка",
                 .smaller: "Меньше",
                 .larger: "Больше",
                 .predictDrop: "Предсказывать позицию размещения",
@@ -1516,6 +1526,7 @@ final class LocalizationManager {
             .iconHorizontalSpacing: "क्षैतिज दूरी",
             .iconVerticalSpacing: "ऊर्ध्वाधर दूरी",
             .labelFontSize: "लेबल फ़ॉन्ट आकार",
+            .iconLabelFontWeight: "आइकन लेबल मोटाई",
             .smaller: "छोटा",
             .larger: "बड़ा",
             .predictDrop: "ड्रॉप स्थान का अनुमान",

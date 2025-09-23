@@ -1451,6 +1451,7 @@ extension LaunchpadView {
                 isSelected: isSelected,
                 showLabel: appStore.showLabels,
                 labelFontSize: CGFloat(appStore.iconLabelFontSize),
+                labelFontWeight: appStore.iconLabelFontWeightValue,
                 shouldAllowHover: shouldAllowHover,
                 externalScale: isCenterCreatingTarget ? 1.2 : nil,
                 hoverMagnificationEnabled: appStore.enableHoverMagnification,

@@ -1057,6 +1057,17 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
+                    Text(appStore.localized(.iconLabelFontWeight))
+                        .font(.headline)
+                    Picker(appStore.localized(.iconLabelFontWeight), selection: $appStore.iconLabelFontWeight) {
+                        ForEach(AppStore.IconLabelFontWeightOption.allCases) { option in
+                            Text(option.displayName).tag(option)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
                     Text(appStore.localized(.iconSize))
                         .font(.headline)
                     Slider(value: $appStore.iconScale, in: 0.8...1.1)

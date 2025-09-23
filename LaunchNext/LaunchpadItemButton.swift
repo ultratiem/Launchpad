@@ -8,6 +8,7 @@ struct LaunchpadItemButton: View {
     let isSelected: Bool
     let showLabel: Bool
     let labelFontSize: CGFloat
+    let labelFontWeight: Font.Weight
     var shouldAllowHover: Bool = true
     var externalScale: CGFloat? = nil
     var hoverMagnificationEnabled: Bool = false
@@ -26,6 +27,7 @@ struct LaunchpadItemButton: View {
          isSelected: Bool = false,
          showLabel: Bool = true,
          labelFontSize: CGFloat = 11,
+         labelFontWeight: Font.Weight = .medium,
          shouldAllowHover: Bool = true,
          externalScale: CGFloat? = nil,
          hoverMagnificationEnabled: Bool = false,
@@ -40,6 +42,7 @@ struct LaunchpadItemButton: View {
         self.isSelected = isSelected
         self.showLabel = showLabel
         self.labelFontSize = labelFontSize
+        self.labelFontWeight = labelFontWeight
         self.shouldAllowHover = shouldAllowHover
         self.externalScale = externalScale
         self.hoverMagnificationEnabled = hoverMagnificationEnabled
@@ -59,6 +62,7 @@ struct LaunchpadItemButton: View {
                 isSelected: isSelected,
                 showLabel: showLabel,
                 labelFontSize: labelFontSize,
+                labelFontWeight: labelFontWeight,
                 shouldAllowHover: shouldAllowHover,
                 externalScale: externalScale,
                 hoverMagnificationEnabled: hoverMagnificationEnabled,
@@ -93,6 +97,7 @@ private struct LaunchpadItemButtonContent: View {
     let isSelected: Bool
     let showLabel: Bool
     let labelFontSize: CGFloat
+    let labelFontWeight: Font.Weight
     let shouldAllowHover: Bool
     let externalScale: CGFloat?
     let hoverMagnificationEnabled: Bool
@@ -149,7 +154,7 @@ private struct LaunchpadItemButtonContent: View {
 
             if showLabel {
                 Text(item.name)
-                    .font(.system(size: labelFontSize, weight: .medium))
+                    .font(.system(size: labelFontSize, weight: labelFontWeight))
                     .lineLimit(1)
                     .multilineTextAlignment(.center)
                     .truncationMode(.tail)

@@ -292,6 +292,7 @@ extension FolderView {
             isSelected: isSelected,
             showLabel: appStore.showLabels,
             labelFontSize: CGFloat(appStore.iconLabelFontSize),
+            labelFontWeight: appStore.iconLabelFontWeightValue,
             shouldAllowHover: draggingApp == nil,
             hoverMagnificationEnabled: appStore.enableHoverMagnification,
             hoverMagnificationScale: CGFloat(appStore.hoverMagnificationScale),

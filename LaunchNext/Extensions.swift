@@ -19,7 +19,7 @@ extension Font {
 extension View {
     @ViewBuilder
     func liquidGlass<S: Shape>(in shape: S, isEnabled: Bool = true) -> some View {
-        if #available(macOS 15.0, iOS 18.0, *) {
+        if #available(macOS 26.0, iOS 18.0, *) {
             self.glassEffect(.regular, in: shape)
         } else {
             self.background(.ultraThinMaterial, in: shape)
@@ -28,7 +28,7 @@ extension View {
 
     @ViewBuilder
     func liquidGlass(isEnabled: Bool = true) -> some View {
-        if #available(macOS 15.0, iOS 18.0, *) {
+        if #available(macOS 26.0, iOS 18.0, *) {
             self.glassEffect(.regular)
         } else {
             self.background(.ultraThinMaterial)
