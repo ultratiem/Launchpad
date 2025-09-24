@@ -272,6 +272,10 @@ As Apple moves away from customizable interfaces, LaunchNext represents the comm
 
 This project was developed with assistance from:
 
-- Claude Code 
+- Claude Code
 - Cursor
 - OpenAI Codex Cli
+
+
+
+![GitHub downloads](https://img.shields.io/github/downloads/RoversX/LaunchNext/total)
