@@ -8,6 +8,7 @@ labels: "enhancement"
 ### Feature Request
 
 <!-- A clear and concise description of the problem you are facing. Example: "I’m always frustrated when..." -->
+<!-- Please post in English. Requests in other languages will be ignored and closed. -->
 
 ### Solution you would like
 
