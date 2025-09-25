@@ -295,8 +295,19 @@ struct LaunchpadView: View {
                     .focused($isSearchFieldFocused)
                     .frame(maxWidth: .infinity)
 
-                    HStack {
+                    HStack(spacing: 8) {
                         Spacer()
+                        if appStore.showQuickRefreshButton {
+                            Button {
+                                appStore.refresh()
+                            } label: {
+                                Image(systemName: "arrow.clockwise.circle")
+                                    .font(.title)
+                                    .foregroundStyle(.placeholder.opacity(0.5))
+                            }
+                            .buttonStyle(.plain)
+                            .help(appStore.localized(.refresh))
+                        }
                         Button {
                             appStore.isSetting = true
                         } label: {
@@ -330,11 +341,10 @@ struct LaunchpadView: View {
                 .opacity(isFolderOpen ? 0.1 : 1)
                 .allowsHitTesting(!isFolderOpen)
                 
-                Divider()
-                    .foregroundStyle(.placeholder)
-                    .padding()
-                    .opacity(isFolderOpen ? 0.1 : 1)
-                
+                // 保持原有上下留白，去掉可见的分割线
+                Spacer()
+                    .frame(height: 16)
+
                 GeometryReader { geo in
                     let appCountPerRow = config.columns
                     let maxRowsPerPage = Int(ceil(Double(config.itemsPerPage) / Double(appCountPerRow)))

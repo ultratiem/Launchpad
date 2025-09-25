@@ -938,8 +938,8 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
                 }
             }
 
-            Divider()
-
+            Toggle(appStore.localized(.showQuickRefreshButton), isOn: $appStore.showQuickRefreshButton)
+                .toggleStyle(.switch)
             HStack {
                 Button { appStore.refresh() } label: {
                     Label(appStore.localized(.refresh), systemImage: "arrow.clockwise")
@@ -1029,13 +1029,15 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(appStore.localized(.backgroundStyleTitle))
                         .font(.headline)
-                    Picker(appStore.localized(.backgroundStyleTitle), selection: $appStore.launchpadBackgroundStyle) {
+                    Picker("", selection: $appStore.launchpadBackgroundStyle) {
                         ForEach(AppStore.BackgroundStyle.allCases) { style in
                             Text(appStore.localized(style.localizationKey)).tag(style)
                         }
                     }
                     .pickerStyle(.segmented)
+                    .labelsHidden()
                 }
+
             }
 
             Divider()
@@ -1059,12 +1061,13 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(appStore.localized(.iconLabelFontWeight))
                         .font(.headline)
-                    Picker(appStore.localized(.iconLabelFontWeight), selection: $appStore.iconLabelFontWeight) {
+                    Picker("", selection: $appStore.iconLabelFontWeight) {
                         ForEach(AppStore.IconLabelFontWeightOption.allCases) { option in
                             Text(option.displayName).tag(option)
                         }
                     }
                     .pickerStyle(.menu)
+                    .labelsHidden()
                 }
 
                 VStack(alignment: .leading, spacing: 8) {

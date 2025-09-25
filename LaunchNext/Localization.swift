@@ -77,6 +77,7 @@ enum LocalizationKey: String {
     case exportData
     case importData
     case refresh
+    case showQuickRefreshButton
     case resetLayout
     case resetAlertTitle
     case resetAlertMessage
@@ -251,6 +252,7 @@ final class LocalizationManager {
                 .exportData: "Export Data",
                 .importData: "Import Data",
                 .refresh: "Refresh",
+                .showQuickRefreshButton: "Show quick refresh button",
                 .resetLayout: "Reset Layout",
                 .resetAlertTitle: "Confirm to reset layout?",
                 .resetAlertMessage: "This will completely reset the layout: remove all folders, clear saved order, and rescan all applications. All customizations will be lost.",
@@ -369,6 +371,7 @@ final class LocalizationManager {
                 .exportData: "Xuất dữ liệu",
                 .importData: "Nhập dữ liệu",
                 .refresh: "Làm mới",
+                .showQuickRefreshButton: "Hiển thị nút làm mới nhanh",
                 .resetLayout: "Đặt lại bố cục",
                 .resetAlertTitle: "Đặt lại bố cục?",
                 .resetAlertMessage: "Thao tác này sẽ xoá mọi thư mục, làm trống thứ tự đã lưu và quét lại toàn bộ ứng dụng. Mọi tuỳ chỉnh sẽ bị mất.",
@@ -484,6 +487,7 @@ final class LocalizationManager {
                 .exportData: "导出数据",
                 .importData: "导入数据",
                 .refresh: "刷新",
+                .showQuickRefreshButton: "显示快速刷新按钮",
                 .resetLayout: "重置布局",
                 .resetAlertTitle: "确认要重置布局？",
                 .resetAlertMessage: "这将完全重置布局：删除所有文件夹、清除保存顺序并重新扫描应用。所有自定义都会丢失。",
@@ -602,6 +606,7 @@ final class LocalizationManager {
                 .exportData: "データをエクスポート",
                 .importData: "データをインポート",
                 .refresh: "リフレッシュ",
+                .showQuickRefreshButton: "クイックリフレッシュボタンを表示",
                 .resetLayout: "レイアウトをリセット",
                 .resetAlertTitle: "レイアウトをリセットしますか？",
                 .resetAlertMessage: "すべてのフォルダを削除し、順序をリセットしてアプリを再スキャンします。カスタマイズは失われます。",
@@ -720,6 +725,7 @@ final class LocalizationManager {
                 .exportData: "데이터 내보내기",
                 .importData: "데이터 가져오기",
                 .refresh: "새로 고침",
+                .showQuickRefreshButton: "빠른 새로 고침 버튼 표시",
                 .resetLayout: "레이아웃 초기화",
                 .resetAlertTitle: "레이아웃을 초기화할까요?",
                 .resetAlertMessage: "모든 폴더를 삭제하고 저장된 순서를 지운 뒤 앱을 다시 스캔해요. 모든 사용자 설정이 사라져요.",
@@ -838,6 +844,7 @@ final class LocalizationManager {
                 .exportData: "Exporter les données",
                 .importData: "Importer des données",
                 .refresh: "Actualiser",
+                .showQuickRefreshButton: "Afficher le bouton de rafraîchissement rapide",
                 .resetLayout: "Réinitialiser la disposition",
                 .resetAlertTitle: "Confirmer la réinitialisation ?",
                 .resetAlertMessage: "La disposition des icônes sera réinitialisée, les dossiers supprimés et les applications rescannées. Toutes les personnalisations seront donc perdues.",
@@ -955,6 +962,7 @@ final class LocalizationManager {
                 .exportData: "Exportar datos",
                 .importData: "Importar datos",
                 .refresh: "Actualizar",
+                .showQuickRefreshButton: "Mostrar botón de actualización rápida",
                 .resetLayout: "Reiniciar diseño",
                 .resetAlertTitle: "¿Reiniciar el diseño?",
                 .resetAlertMessage: "Esto restablecerá por completo el diseño: eliminará carpetas, limpiará el orden y volverá a escanear las apps. Se perderán todas las personalizaciones.",
@@ -1072,6 +1080,7 @@ final class LocalizationManager {
                 .exportData: "Daten exportieren",
                 .importData: "Daten importieren",
                 .refresh: "Aktualisieren",
+                .showQuickRefreshButton: "Schnellaktualisierungsbutton anzeigen",
                 .resetLayout: "Layout zurücksetzen",
                 .resetAlertTitle: "Layout wirklich zurücksetzen?",
                 .resetAlertMessage: "Dies setzt das Layout vollständig zurück: Alle Ordner werden entfernt, die gespeicherte Reihenfolge gelöscht und alle Apps neu eingelesen. Anpassungen gehen verloren.",
@@ -1190,6 +1199,7 @@ final class LocalizationManager {
                 .exportData: "Экспортировать данные",
                 .importData: "Импортировать данные",
                 .refresh: "Обновить",
+                .showQuickRefreshButton: "Показывать кнопку быстрого обновления",
                 .resetLayout: "Сбросить раскладку",
                 .resetAlertTitle: "Сбросить раскладку?",
                 .resetAlertMessage: "Раскладка будет полностью сброшена: папки удалятся, порядок очистится, приложения будут просканированы заново. Все настройки будут потеряны.",
@@ -1558,6 +1568,7 @@ final class LocalizationManager {
             .exportData: "डेटा निर्यात करें",
             .importData: "डेटा आयात करें",
             .refresh: "रिफ़्रेश",
+            .showQuickRefreshButton: "क्विक रिफ़्रेश बटन दिखाएँ",
             .resetLayout: "लेआउट रीसेट करें",
             .resetAlertTitle: "क्या लेआउट रीसेट करें?",
             .resetAlertMessage: "यह सभी फ़ोल्डर हटाकर क्रम साफ़ करेगा और ऐप्स को पुनः स्कैन करेगा। सभी कस्टम बदलाव हटेंगे।",

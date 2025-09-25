@@ -142,6 +142,7 @@ final class AppStore: ObservableObject {
     private static let columnSpacingKey = "gridColumnSpacing"
     private static let rowSpacingKey = "gridRowSpacing"
     private static let iconLabelFontWeightKey = "iconLabelFontWeight"
+    private static let showQuickRefreshButtonKey = "showQuickRefreshButton"
     private static let rememberPageKey = "rememberLastPage"
     private static let rememberedPageIndexKey = "rememberedPageIndex"
     private static let globalHotKeyKey = "globalHotKeyConfiguration"
@@ -535,6 +536,16 @@ final class AppStore: ObservableObject {
 
     var iconLabelFontWeightValue: Font.Weight {
         iconLabelFontWeight.fontWeight
+    }
+
+    @Published var showQuickRefreshButton: Bool = {
+        if UserDefaults.standard.object(forKey: AppStore.showQuickRefreshButtonKey) == nil { return false }
+        return UserDefaults.standard.bool(forKey: AppStore.showQuickRefreshButtonKey)
+    }() {
+        didSet {
+            guard showQuickRefreshButton != oldValue else { return }
+            UserDefaults.standard.set(showQuickRefreshButton, forKey: AppStore.showQuickRefreshButtonKey)
+        }
     }
 
     // 更新检查相关属性
@@ -1208,33 +1219,43 @@ final class AppStore: ObservableObject {
         }
         
         if !newFreeApps.isEmpty {
-            
-            // 计算最后一页的信息
+            var pendingApps = newFreeApps
             let itemsPerPage = self.itemsPerPage
-            let currentPages = (newItems.count + itemsPerPage - 1) / itemsPerPage
-            let lastPageStart = currentPages > 0 ? (currentPages - 1) * itemsPerPage : 0
-            let lastPageEnd = newItems.count
-            
-            // 如果最后一页有空间，直接添加到末尾
-            if lastPageEnd < lastPageStart + itemsPerPage {
-                for app in newFreeApps {
-                    newItems.append(.app(app))
+
+            if newItems.count > 0 {
+                let lastPageStart = ((newItems.count - 1) / itemsPerPage) * itemsPerPage
+                let lastPageIndices = Array(lastPageStart..<newItems.count)
+                let emptyIndices = lastPageIndices.filter { index in
+                    if case .empty = newItems[index] { return true }
+                    return false
                 }
-            } else {
-                // 如果最后一页满了，需要创建新页面
-                // 先填充最后一页到完整
-                let remainingSlots = itemsPerPage - (lastPageEnd - lastPageStart)
-                for _ in 0..<remainingSlots {
-                    newItems.append(.empty(UUID().uuidString))
+                let fillCount = min(pendingApps.count, emptyIndices.count)
+                for i in 0..<fillCount {
+                    newItems[emptyIndices[i]] = .app(pendingApps.removeFirst())
                 }
-                
-                // 然后在新页面添加新应用
-                for app in newFreeApps {
-                    newItems.append(.app(app))
+            }
+
+            if !pendingApps.isEmpty {
+                let remainder = newItems.count % itemsPerPage
+                if remainder != 0 {
+                    let fillCount = min(itemsPerPage - remainder, pendingApps.count)
+                    for _ in 0..<fillCount {
+                        newItems.append(.app(pendingApps.removeFirst()))
+                    }
+                }
+
+                while !pendingApps.isEmpty {
+                    for _ in 0..<itemsPerPage {
+                        if pendingApps.isEmpty {
+                            newItems.append(.empty(UUID().uuidString))
+                        } else {
+                            newItems.append(.app(pendingApps.removeFirst()))
+                        }
+                    }
                 }
             }
         }
-        
+
         self.items = filteredItemsRemovingHidden(from: newItems)
     }
     
@@ -1247,11 +1268,11 @@ final class AppStore: ObservableObject {
         if hasPersistedData {
             
             // 智能合并现有顺序和持久化数据
-            self.mergeCurrentOrderWithPersistedData(currentItems: currentItems, newApps: newApps)
+            self.mergeCurrentOrderWithPersistedData(currentItems: currentItems, newApps: newApps, loadPersistedFolders: true)
         } else {
             
-            // 没有持久化数据时，使用扫描结果重新构建
-            self.rebuildFromScannedApps(newApps: newApps)
+            // 没有持久化数据时，直接基于当前顺序合并
+            self.mergeCurrentOrderWithPersistedData(currentItems: currentItems, newApps: newApps, loadPersistedFolders: false)
         }
         
     }
@@ -1270,13 +1291,15 @@ final class AppStore: ObservableObject {
     }
     
     /// 智能合并现有顺序和持久化数据
-    private func mergeCurrentOrderWithPersistedData(currentItems: [LaunchpadItem], newApps: [AppInfo]) {
+    private func mergeCurrentOrderWithPersistedData(currentItems: [LaunchpadItem], newApps: [AppInfo], loadPersistedFolders: Bool = true) {
         
         // 保存当前的项目顺序
         let currentOrder = currentItems
         
         // 加载持久化数据，但只更新文件夹信息
-        self.loadFoldersFromPersistedData()
+        if loadPersistedFolders {
+            self.loadFoldersFromPersistedData()
+        }
         
         // 重建项目列表，严格保持现有顺序
         var newItems: [LaunchpadItem] = []
@@ -1333,79 +1356,45 @@ final class AppStore: ObservableObject {
         }
         
         if !newFreeApps.isEmpty {
-            
-            // 计算最后一页的信息
+            var pendingApps = newFreeApps
             let itemsPerPage = self.itemsPerPage
-            let currentPages = (newItems.count + itemsPerPage - 1) / itemsPerPage
-            let lastPageStart = currentPages > 0 ? (currentPages - 1) * itemsPerPage : 0
-            let lastPageEnd = newItems.count
-            
-            // 如果最后一页有空间，直接添加到末尾
-            if lastPageEnd < lastPageStart + itemsPerPage {
-                for app in newFreeApps {
-                    newItems.append(.app(app))
+
+            if newItems.count > 0 {
+                let lastPageStart = ((newItems.count - 1) / itemsPerPage) * itemsPerPage
+                let lastPageIndices = Array(lastPageStart..<newItems.count)
+                let emptyIndices = lastPageIndices.filter { index in
+                    if case .empty = newItems[index] { return true }
+                    return false
                 }
-            } else {
-                // 如果最后一页满了，需要创建新页面
-                // 先填充最后一页到完整
-                let remainingSlots = itemsPerPage - (lastPageEnd - lastPageStart)
-                for _ in 0..<remainingSlots {
-                    newItems.append(.empty(UUID().uuidString))
+                let fillCount = min(pendingApps.count, emptyIndices.count)
+                for i in 0..<fillCount {
+                    newItems[emptyIndices[i]] = .app(pendingApps.removeFirst())
                 }
-                
-                // 然后在新页面添加新应用
-                for app in newFreeApps {
-                    newItems.append(.app(app))
+            }
+
+            if !pendingApps.isEmpty {
+                let remainder = newItems.count % itemsPerPage
+                if remainder != 0 {
+                    let fillCount = min(itemsPerPage - remainder, pendingApps.count)
+                    for _ in 0..<fillCount {
+                        newItems.append(.app(pendingApps.removeFirst()))
+                    }
+                }
+
+                while !pendingApps.isEmpty {
+                    for _ in 0..<itemsPerPage {
+                        if pendingApps.isEmpty {
+                            newItems.append(.empty(UUID().uuidString))
+                        } else {
+                            newItems.append(.app(pendingApps.removeFirst()))
+                        }
+                    }
                 }
             }
         }
         
         self.items = filteredItemsRemovingHidden(from: newItems)
 
-    }
-    
-    /// 从扫描结果重新构建（没有持久化数据时）
-    private func rebuildFromScannedApps(newApps: [AppInfo]) {
-        
-        // 创建新的应用列表
-        var newItems: [LaunchpadItem] = []
-        
-        // 添加所有自由应用（不在文件夹中的），保持现有顺序
-        let appsInFolders = Set(self.folders.flatMap { $0.apps })
-        let freeApps = self.apps.filter { !appsInFolders.contains($0) }
-        
-        // 保持现有顺序，不重新排序
-        for app in freeApps {
-            newItems.append(.app(app))
-        }
-        
-        // 添加文件夹
-        for folder in self.folders {
-            newItems.append(.folder(folder))
-        }
-        
-        // 添加新增应用
-        for app in newApps {
-            if !appsInFolders.contains(app) && !freeApps.contains(app) {
-                newItems.append(.app(app))
-            }
-        }
-        
-        // 确保最后一页是完整的（如果不是最后一页，填充空槽位）
-        let itemsPerPage = self.itemsPerPage
-        let currentPages = (newItems.count + itemsPerPage - 1) / itemsPerPage
-        let lastPageStart = currentPages > 0 ? (currentPages - 1) * itemsPerPage : 0
-        let lastPageEnd = newItems.count
-        
-        // 如果最后一页不完整，填充空槽位
-        if lastPageEnd < lastPageStart + itemsPerPage {
-            let remainingSlots = itemsPerPage - (lastPageEnd - lastPageStart)
-            for _ in 0..<remainingSlots {
-                newItems.append(.empty(UUID().uuidString))
-            }
-        }
-        
-        self.items = filteredItemsRemovingHidden(from: newItems)
     }
     
     /// 只加载文件夹信息，不重建项目顺序
