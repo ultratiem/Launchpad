@@ -151,6 +151,12 @@ final class AppStore: ObservableObject {
     private static let activePressEffectKey = "enableActivePressEffect"
     private static let activePressScaleKey = "activePressScale"
     private static let backgroundStyleKey = "launchpadBackgroundStyle"
+    private static let gameControllerEnabledKey = "gameControllerEnabled"
+    private static let soundEffectsEnabledKey = "soundEffectsEnabled"
+    private static let soundLaunchpadOpenKey = "soundLaunchpadOpenSound"
+    private static let soundLaunchpadCloseKey = "soundLaunchpadCloseSound"
+    private static let soundNavigationKey = "soundNavigationSound"
+    private static let voiceFeedbackEnabledKey = "voiceFeedbackEnabled"
 
     private static func loadHiddenApps() -> Set<String> {
         if let array = UserDefaults.standard.array(forKey: hiddenAppsKey) as? [String] {
@@ -190,6 +196,9 @@ final class AppStore: ObservableObject {
     private static let defaultFolderPopoverHeight: Double = 0.85
     private static let lastUpdateCheckKey = "lastUpdateCheckTimestamp"
     private static let automaticUpdateInterval: TimeInterval = 60 * 60 * 24
+    private static let defaultLaunchpadOpenSound = "Submarine"
+    private static let defaultLaunchpadCloseSound = "Glass"
+    private static let defaultNavigationSound = "Tink"
 
     private var lastUpdateCheck: Date? {
         get {
@@ -205,6 +214,12 @@ final class AppStore: ObservableObject {
                 UserDefaults.standard.removeObject(forKey: Self.lastUpdateCheckKey)
             }
         }
+    }
+
+    private static func normalizedSoundName(_ raw: String?, defaultValue: String) -> String {
+        guard let raw else { return defaultValue }
+        if raw.isEmpty { return "" }
+        return SoundManager.isValidSystemSoundName(raw) ? raw : defaultValue
     }
 
     private lazy var notificationDelegate = UpdateNotificationDelegate(openHandler: { [weak self] url in
@@ -591,6 +606,66 @@ final class AppStore: ObservableObject {
         return UserDefaults.standard.bool(forKey: "showFPSOverlay")
     }() {
         didSet { UserDefaults.standard.set(showFPSOverlay, forKey: "showFPSOverlay") }
+    }
+
+    @Published var gameControllerEnabled: Bool = {
+        if UserDefaults.standard.object(forKey: AppStore.gameControllerEnabledKey) == nil { return false }
+        return UserDefaults.standard.bool(forKey: AppStore.gameControllerEnabledKey)
+    }() {
+        didSet {
+            guard oldValue != gameControllerEnabled else { return }
+            UserDefaults.standard.set(gameControllerEnabled, forKey: AppStore.gameControllerEnabledKey)
+        }
+    }
+
+    @Published var soundEffectsEnabled: Bool = {
+        if UserDefaults.standard.object(forKey: AppStore.soundEffectsEnabledKey) == nil { return false }
+        return UserDefaults.standard.bool(forKey: AppStore.soundEffectsEnabledKey)
+    }() {
+        didSet {
+            guard oldValue != soundEffectsEnabled else { return }
+            UserDefaults.standard.set(soundEffectsEnabled, forKey: AppStore.soundEffectsEnabledKey)
+        }
+    }
+
+    @Published var soundLaunchpadOpenSound: String = {
+        let stored = UserDefaults.standard.string(forKey: AppStore.soundLaunchpadOpenKey)
+        return AppStore.normalizedSoundName(stored, defaultValue: AppStore.defaultLaunchpadOpenSound)
+    }() {
+        didSet {
+            UserDefaults.standard.set(soundLaunchpadOpenSound, forKey: AppStore.soundLaunchpadOpenKey)
+        }
+    }
+
+    @Published var soundLaunchpadCloseSound: String = {
+        let stored = UserDefaults.standard.string(forKey: AppStore.soundLaunchpadCloseKey)
+        return AppStore.normalizedSoundName(stored, defaultValue: AppStore.defaultLaunchpadCloseSound)
+    }() {
+        didSet {
+            UserDefaults.standard.set(soundLaunchpadCloseSound, forKey: AppStore.soundLaunchpadCloseKey)
+        }
+    }
+
+    @Published var soundNavigationSound: String = {
+        let stored = UserDefaults.standard.string(forKey: AppStore.soundNavigationKey)
+        return AppStore.normalizedSoundName(stored, defaultValue: AppStore.defaultNavigationSound)
+    }() {
+        didSet {
+            UserDefaults.standard.set(soundNavigationSound, forKey: AppStore.soundNavigationKey)
+        }
+    }
+
+    @Published var voiceFeedbackEnabled: Bool = {
+        if UserDefaults.standard.object(forKey: AppStore.voiceFeedbackEnabledKey) == nil { return false }
+        return UserDefaults.standard.bool(forKey: AppStore.voiceFeedbackEnabledKey)
+    }() {
+        didSet {
+            guard oldValue != voiceFeedbackEnabled else { return }
+            UserDefaults.standard.set(voiceFeedbackEnabled, forKey: AppStore.voiceFeedbackEnabledKey)
+            if !voiceFeedbackEnabled {
+                VoiceManager.shared.stop()
+            }
+        }
     }
 
     @Published var pageIndicatorOffset: Double = {

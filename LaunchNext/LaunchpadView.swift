@@ -139,6 +139,7 @@ struct LaunchpadView: View {
     @State private var fpsMonitor: FPSMonitor?
     @State private var fpsValue: Double = 0
     @State private var frameTimeMilliseconds: Double = 0
+    @State private var isWindowVisible: Bool = true
 
     private var isFolderOpen: Bool { appStore.openFolder != nil }
     
@@ -738,14 +739,18 @@ struct LaunchpadView: View {
           .onChange(of: isSearchFieldFocused) { _, focused in
              if focused { isKeyboardNavigationActive = false }
          }
+         .onReceive(ControllerInputManager.shared.commands) { command in
+             handleControllerCommand(command)
+         }
 
            .onAppear {
-               appStore.performInitialScanIfNeeded()
-               setupKeyHandlers()
-               setupInitialSelection()
-               setupWindowShownObserver()
-               setupWindowHiddenObserver()
-               // 监听全局鼠标抬起，确保拖拽状态被正确清理（窗口外释放时）
+              appStore.performInitialScanIfNeeded()
+              setupKeyHandlers()
+              setupInitialSelection()
+              setupWindowShownObserver()
+              setupWindowHiddenObserver()
+              isWindowVisible = true
+              // 监听全局鼠标抬起，确保拖拽状态被正确清理（窗口外释放时）
                if let existing = globalMouseUpMonitor { NSEvent.removeMonitor(existing) }
                globalMouseUpMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseUp]) { _ in
                    if handoffEventMonitor != nil || draggingItem != nil {
@@ -794,6 +799,16 @@ struct LaunchpadView: View {
             } else {
                 stopFPSMonitoring()
                 fpsValue = 0
+            }
+        }
+        .onChange(of: appStore.voiceFeedbackEnabled) { _, enabled in
+            if enabled {
+                if let idx = selectedIndex, filteredItems.indices.contains(idx) {
+                    let item = filteredItems[idx]
+                    VoiceManager.shared.announceSelection(item: item)
+                }
+            } else {
+                VoiceManager.shared.stop()
             }
         }
     }
@@ -1205,6 +1220,7 @@ extension LaunchpadView {
             windowObserver = nil
         }
         windowObserver = NotificationCenter.default.addObserver(forName: .launchpadWindowShown, object: nil, queue: .main) { _ in
+            isWindowVisible = true
             isKeyboardNavigationActive = false
             selectedIndex = 0
             isSearchFieldFocused = true
@@ -1220,6 +1236,7 @@ extension LaunchpadView {
             windowHiddenObserver = nil
         }
         windowHiddenObserver = NotificationCenter.default.addObserver(forName: .launchpadWindowHidden, object: nil, queue: .main) { _ in
+            isWindowVisible = false
             selectedIndex = 0
         }
     }
@@ -1369,12 +1386,69 @@ extension LaunchpadView {
         return event
     }
 
+    private func handleControllerCommand(_ command: ControllerCommand) {
+        guard appStore.gameControllerEnabled else { return }
+        guard isWindowVisible else { return }
+        guard ControllerInputManager.shared.isActive else { return }
+        if appStore.isSetting { return }
+
+        switch command {
+        case .move(let direction), .moveRepeat(let direction):
+            activateKeyboardNavigationIfNeeded()
+            synthesizeKeyDown(keyCode: keyCode(for: direction))
+        case .stop(_):
+            break
+        case .select:
+            synthesizeKeyDown(keyCode: 36)
+        case .cancel:
+            synthesizeKeyDown(keyCode: 53)
+        }
+    }
+
+    private func activateKeyboardNavigationIfNeeded() {
+        guard !isKeyboardNavigationActive else { return }
+        isKeyboardNavigationActive = true
+        setSelectionToPageStart(appStore.currentPage)
+        clampSelection()
+    }
+
+    private func keyCode(for direction: ControllerCommand.Direction) -> UInt16 {
+        switch direction {
+        case .left: return 123
+        case .right: return 124
+        case .up: return 126
+        case .down: return 125
+        }
+    }
+
+    private func synthesizeKeyDown(keyCode: UInt16) {
+        guard let event = NSEvent.keyEvent(
+            with: .keyDown,
+            location: .zero,
+            modifierFlags: [],
+            timestamp: ProcessInfo.processInfo.systemUptime,
+            windowNumber: 0,
+            context: nil,
+            characters: "",
+            charactersIgnoringModifiers: "",
+            isARepeat: false,
+            keyCode: keyCode
+        ) else {
+            return
+        }
+        _ = handleKeyEvent(event)
+    }
+
     private func moveSelection(dx: Int, dy: Int) {
         guard let current = selectedIndex else { return }
         let columns = config.columns
         let newIndex: Int = dy == 0 ? current + dx : current + dy * columns
         guard filteredItems.indices.contains(newIndex) else { return }
+        guard newIndex != current else { return }
         selectedIndex = newIndex
+        let item = filteredItems[newIndex]
+        SoundManager.shared.play(.navigation)
+        VoiceManager.shared.announceSelection(item: item)
         
         let page = newIndex / config.itemsPerPage
         if page != appStore.currentPage {

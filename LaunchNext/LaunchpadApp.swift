@@ -44,11 +44,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
         Self.shared = self
         appStore.syncGlobalHotKeyRegistration()
 
+        SoundManager.shared.bind(appStore: appStore)
+        VoiceManager.shared.bind(appStore: appStore)
         setupWindow()
         appStore.performInitialScanIfNeeded()
         appStore.startAutoRescan()
 
         bindAppearancePreference()
+        bindControllerPreference()
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.applyAppearancePreference(self.appStore.appearancePreference)
@@ -164,6 +167,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
             .sink { [weak self] preference in
                 DispatchQueue.main.async {
                     self?.applyAppearancePreference(preference)
+                }
+            }
+            .store(in: &cancellables)
+    }
+
+    private func bindControllerPreference() {
+        appStore.$gameControllerEnabled
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
+            .sink { enabled in
+                if enabled {
+                    ControllerInputManager.shared.start()
+                } else {
+                    ControllerInputManager.shared.stop()
                 }
             }
             .store(in: &cancellables)
@@ -286,6 +303,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
 
         lastShowAt = Date()
         windowIsVisible = true
+        SoundManager.shared.play(.launchpadOpen)
         NotificationCenter.default.post(name: .launchpadWindowShown, object: nil)
 
         animateWindow(to: 1) {
@@ -296,6 +314,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
     private func performHideWindow() {
         pendingHide = false
         guard let window = window else { return }
+
+        let shouldPlaySound = windowIsVisible && !isTerminating
 
         let finalize: () -> Void = {
             self.windowIsVisible = false
@@ -315,8 +335,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
         }
 
         if (!windowIsVisible && window.alphaValue <= 0.01) || isTerminating {
+            if shouldPlaySound {
+                SoundManager.shared.play(.launchpadClose)
+            }
             finalize()
             return
+        }
+
+        if shouldPlaySound {
+            SoundManager.shared.play(.launchpadClose)
         }
 
         animateWindow(to: 0) {
@@ -368,6 +395,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
             showWindow()
         }
         return false
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        ControllerInputManager.shared.stop()
     }
     
     private func isInteractiveView(_ view: NSView?) -> Bool {

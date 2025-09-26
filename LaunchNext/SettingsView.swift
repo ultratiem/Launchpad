@@ -7,6 +7,7 @@ import Darwin
 
 struct SettingsView: View {
     @ObservedObject var appStore: AppStore
+    @ObservedObject private var controllerManager = ControllerInputManager.shared
     @State private var showResetConfirm = false
     @State private var selectedSection: SettingsSection = .general
     @State private var titleSearch: String = ""
@@ -103,7 +104,8 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
     case titles
     case hiddenApps
     case development
-    case accessibility
+    case sound
+    case gameController
     case about
 
     var id: String { rawValue }
@@ -111,12 +113,13 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
     var iconName: String {
         switch self {
         case .general: return "gearshape"
+        case .gameController: return "gamecontroller"
+        case .sound: return "speaker.wave.2"
         case .appearance: return "paintbrush"
         case .performance: return "speedometer"
         case .titles: return "text.badge.plus"
         case .hiddenApps: return "eye.slash"
         case .development: return "hammer"
-        case .accessibility: return "figure.wave.circle"
         case .about: return "info.circle"
         }
     }
@@ -126,6 +129,10 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .general:
             colors = [Color(red: 0.12, green: 0.52, blue: 0.96), Color(red: 0.22, green: 0.72, blue: 0.94)]
+        case .sound:
+            colors = [Color(red: 0.96, green: 0.48, blue: 0.24), Color(red: 0.98, green: 0.68, blue: 0.30)]
+        case .gameController:
+            colors = [Color(red: 0.46, green: 0.34, blue: 0.97), Color(red: 0.31, green: 0.54, blue: 0.99)]
         case .appearance:
             colors = [Color(red: 0.73, green: 0.25, blue: 0.96), Color(red: 0.98, green: 0.43, blue: 0.80)]
         case .performance:
@@ -136,8 +143,6 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
             colors = [Color(red: 0.29, green: 0.39, blue: 0.96), Color(red: 0.11, green: 0.67, blue: 0.91)]
         case .development:
             colors = [Color(red: 0.98, green: 0.58, blue: 0.16), Color(red: 0.96, green: 0.20, blue: 0.24)]
-        case .accessibility:
-            colors = [Color(red: 0.28, green: 0.66, blue: 0.99), Color(red: 0.23, green: 0.82, blue: 0.68)]
         case .about:
             colors = [Color(red: 0.54, green: 0.55, blue: 0.70), Color(red: 0.42, green: 0.44, blue: 0.60)]
         }
@@ -147,12 +152,13 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
     var localizationKey: LocalizationKey {
         switch self {
         case .general: return .settingsSectionGeneral
+        case .sound: return .settingsSectionSound
+        case .gameController: return .settingsSectionGameController
         case .appearance: return .settingsSectionAppearance
         case .performance: return .settingsSectionPerformance
         case .titles: return .settingsSectionTitles
         case .hiddenApps: return .settingsSectionHiddenApps
         case .development: return .settingsSectionDevelopment
-        case .accessibility: return .settingsSectionAccessibility
         case .about: return .settingsSectionAbout
         }
     }
@@ -212,27 +218,152 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
             hiddenAppsSection
         case .development:
             developmentSection
-        case .accessibility:
-            accessibilitySection
+        case .sound:
+            soundSection
+        case .gameController:
+            gameControllerSection
         case .about:
             aboutSection
         }
     }
 
-    private var accessibilitySection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(appStore.localized(.accessibilityPlaceholderTitle))
-                .font(.headline)
-                .foregroundStyle(.white)
-            Text(appStore.localized(.accessibilityPlaceholderSubtitle))
+    private var gameControllerSection: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(appStore.localized(.gameControllerPlaceholderTitle))
+                    .font(.headline.weight(.semibold))
+
+                Toggle(isOn: $appStore.gameControllerEnabled) {
+                    Text(appStore.localized(.gameControllerToggleTitle))
+                        .font(.subheadline.weight(.semibold))
+                }
+                .toggleStyle(.switch)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(gameControllerStatusText)
+                        .font(.callout.weight(.medium))
+                        .foregroundStyle(.primary)
+
+                    Text(appStore.localized(.gameControllerPlaceholderSubtitle))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color(nsColor: .quaternarySystemFill))
+            )
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(appStore.localized(.gameControllerQuickGuideTitle))
+                    .font(.footnote.weight(.semibold))
+
+                VStack(alignment: .leading, spacing: 6) {
+                    guideRow(icon: "dpad", text: appStore.localized(.gameControllerQuickGuideDirection))
+                    guideRow(icon: "a.circle.fill", text: appStore.localized(.gameControllerQuickGuideSelect))
+                    guideRow(icon: "b.circle.fill", text: appStore.localized(.gameControllerQuickGuideCancel))
+                }
+            }
+        }
+    }
+
+    private func guideRow(icon: String, text: String) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+            Image(systemName: icon)
+                .font(.subheadline.weight(.semibold))
+                .symbolRenderingMode(.monochrome)
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 18)
+
+            Text(text)
                 .font(.footnote)
-                .foregroundStyle(Color.white.opacity(0.8))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var gameControllerStatusText: String {
+        if !appStore.gameControllerEnabled {
+            return appStore.localized(.gameControllerStatusDisabled)
+        }
+
+        let names = controllerManager.connectedControllerNames
+        guard !names.isEmpty else {
+            return appStore.localized(.gameControllerStatusNoController)
+        }
+
+        let joined = names.joined(separator: ", ")
+        return String(format: appStore.localized(.gameControllerStatusConnectedFormat), joined)
+    }
+
+    private var soundSection: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Toggle(isOn: $appStore.soundEffectsEnabled) {
+                Text(appStore.localized(.soundToggleTitle))
+                    .font(.subheadline.weight(.semibold))
+            }
+            .toggleStyle(.switch)
+
+            Text(appStore.localized(.soundToggleDescription))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 12) {
+                soundPickerRow(title: .soundEventLaunchpadOpen, binding: $appStore.soundLaunchpadOpenSound)
+                soundPickerRow(title: .soundEventLaunchpadClose, binding: $appStore.soundLaunchpadCloseSound)
+                soundPickerRow(title: .soundEventNavigation, binding: $appStore.soundNavigationSound)
+            }
+
+            Divider()
+
+            Toggle(isOn: $appStore.voiceFeedbackEnabled) {
+                Text(appStore.localized(.voiceToggleTitle))
+                    .font(.subheadline.weight(.semibold))
+            }
+            .toggleStyle(.switch)
+
+            Text(appStore.localized(.voiceToggleDescription))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            Text(appStore.localized(.voiceNoteMutualExclusive))
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(red: 0.17, green: 0.36, blue: 0.9))
+                .fill(Color(nsColor: .quaternarySystemFill))
+        )
+    }
+
+    private func soundPickerRow(title: LocalizationKey, binding: Binding<String>) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            Text(appStore.localized(title))
+                .font(.subheadline.weight(.semibold))
+
+            Spacer(minLength: 12)
+
+            Picker("", selection: binding) {
+                Text(appStore.localized(.soundOptionNone)).tag("")
+                ForEach(SoundManager.systemSoundOptions) { option in
+                    Text(option.displayName).tag(option.id)
+                }
+            }
+            .labelsHidden()
+            .frame(minWidth: 140)
+
+            Button(appStore.localized(.soundPreviewButton)) {
+                SoundManager.shared.preview(systemSoundNamed: binding.wrappedValue)
+            }
+            .disabled(binding.wrappedValue.isEmpty)
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(nsColor: .windowBackgroundColor))
         )
     }
 
