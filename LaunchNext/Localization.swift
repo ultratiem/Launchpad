@@ -967,7 +967,7 @@ final class LocalizationManager {
                 .updatesRefreshButton: "Vérifier à nouveau",
                 .openUpdaterConfig: "Ouvrir le fichier de configuration des mises à jour",
                 .updaterConfirmTitle: "Installer la mise à jour via le Terminal ?",
-                .updaterConfirmMessage: "LaunchNext va se fermer et ouvrir le programme de mise à jour en mode Terminal. L’application se relancera automatiquement une fois l’installation terminée.",
+                .updaterConfirmMessage: "LaunchNext va se fermer et lancer le programme de mise à jour en mode Terminal. L’application se relancera automatiquement une fois l’installation terminée.",
                 .updaterTerminalHint: "La mise à jour s’exécute dans le Terminal. LaunchNext va se fermer puis se relancer automatiquement.",
                 .updaterLaunchFailed: "Échec du lancement du programme de mise à jour (%@).",
                 .updaterMissingBinary: "Programme de mise à jour introuvable dans le paquet de l’application.",
