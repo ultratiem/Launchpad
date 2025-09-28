@@ -8,6 +8,7 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     case korean = "ko"
     case french = "fr"
     case spanish = "es"
+    case czech = "cs"
     case german = "de"
     case russian = "ru"
     case hindi = "hi"
@@ -23,6 +24,7 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         if lower.hasPrefix("ko") { return .korean }
         if lower.hasPrefix("fr") { return .french }
         if lower.hasPrefix("es") { return .spanish }
+        if lower.hasPrefix("cs") { return .czech }
         if lower.hasPrefix("de") { return .german }
         if lower.hasPrefix("ru") { return .russian }
         if lower.hasPrefix("hi") { return .hindi }
@@ -169,6 +171,7 @@ enum LocalizationKey: String {
     case languageNameKorean
     case languageNameFrench
     case languageNameSpanish
+    case languageNameCzech
     case languageNameGerman
     case languageNameRussian
     case languageNameHindi
@@ -295,6 +298,7 @@ final class LocalizationManager {
                 .languageNameKorean: "韩语",
                 .languageNameFrench: "法语",
                 .languageNameSpanish: "西班牙语",
+                .languageNameCzech: "捷克语",
                 .languageNameGerman: "德语",
                 .languageNameRussian: "俄语",
                 .languageNameHindi: "Hindi",
@@ -414,6 +418,7 @@ final class LocalizationManager {
                 .languageNameKorean: "Tiếng Hàn",
                 .languageNameFrench: "Tiếng Pháp",
                 .languageNameSpanish: "Tiếng Tây Ban Nha",
+                .languageNameCzech: "Tiếng Séc",
                 .languageNameGerman: "Tiếng Đức",
                 .languageNameRussian: "Tiếng Nga",
                 .languageNameHindi: "Tiếng Hindi",
@@ -533,6 +538,7 @@ final class LocalizationManager {
                 .languageNameKorean: "韩语",
                 .languageNameFrench: "フランス語",
                 .languageNameSpanish: "スペイン語",
+                .languageNameCzech: "捷克语",
                 .languageNameGerman: "ドイツ語",
                 .languageNameRussian: "俄语",
                 .languageNameHindi: "印地语",
@@ -652,6 +658,7 @@ final class LocalizationManager {
                 .languageNameKorean: "Coréen",
                 .languageNameFrench: "Français",
                 .languageNameSpanish: "Espagnol",
+                .languageNameCzech: "Tchèque",
                 .languageNameGerman: "Allemand",
                 .languageNameRussian: "Russe",
                 .languageNameHindi: "Hindi",
@@ -771,6 +778,7 @@ final class LocalizationManager {
                 .languageNameKorean: "한국어",
                 .languageNameFrench: "프랑스어",
                 .languageNameSpanish: "스페인어",
+                .languageNameCzech: "체코어",
                 .languageNameGerman: "독일어",
                 .languageNameRussian: "러시아어",
                 .languageNameHindi: "힌디어",
@@ -890,6 +898,7 @@ final class LocalizationManager {
                 .languageNameKorean: "韩语",
                 .languageNameFrench: "Français",
                 .languageNameSpanish: "Español",
+                .languageNameCzech: "Tchèque",
                 .languageNameGerman: "Deutsch",
                 .languageNameRussian: "Русский",
                 .languageNameHindi: "Hindi",
@@ -1008,6 +1017,7 @@ final class LocalizationManager {
                 .languageNameKorean: "한국어",
                 .languageNameFrench: "Français",
                 .languageNameSpanish: "Español",
+                .languageNameCzech: "Checo",
                 .languageNameGerman: "Deutsch",
                 .languageNameRussian: "Русский",
                 .languageNameVietnamese: "Vietnamita",
@@ -1034,6 +1044,126 @@ final class LocalizationManager {
                 .tryAgain: "Intentar de nuevo",
                 .autoCheckForUpdates: "Buscar actualizaciones automáticamente",
                 .versionParseError: "Error de análisis de versión"
+            ],
+            .czech: [
+                .noAppsFound: "Nebyla nalezena žádná aplikace",
+                .searchPlaceholder: "Hledat",
+                .renameSearchPlaceholder: "Hledat aplikace",
+                .customTitlePlaceholder: "Zadejte vlastní název",
+                .customTitleHint: "Zde můžete přejmenovat aplikace. Vlastní názvy zůstanou i po importu nebo změně jazyka.",
+                .customTitleDefaultFormat: "Výchozí: %@",
+                .customTitleReset: "Obnovit výchozí",
+                .customTitleAddButton: "Přidat aplikaci",
+                .customTitleEmptyTitle: "Zatím nejsou nastaveny žádné vlastní názvy",
+                .customTitleEmptySubtitle: "Vyberte aplikaci, kterou chcete přejmenovat. Vlastní názvy zůstanou zachovány i po importu nebo změně jazyka.",
+                .customTitleNoResults: "Žádné výsledky",
+                .customTitlePickerMessage: "Vyberte aplikaci pro správu jejího názvu.",
+                .customTitleEdit: "Upravit",
+                .customTitleSave: "Uložit",
+                .customTitleCancel: "Zrušit",
+                .customTitleDelete: "Odstranit",
+                .loadingApplications: "Načítání aplikací…",
+                .showFPSOverlay: "Zobrazit překrytí FPS",
+                .showFPSOverlayDisclaimer: "Přibližné měření; nemusí odpovídat skutečné plynulosti snímků.",
+                .customIconTitle: "Ikona aplikace",
+                .customIconChoose: "Vybrat…",
+                .customIconReset: "Obnovit výchozí",
+                .customIconHint: "Nejlépe fungují soubory PNG/ICNS o velikosti 512×512. Změna se projeví okamžitě.",
+                .customIconError: "Nepodařilo se načíst vybraný obrázek.",
+                .pageIndicatorOffsetLabel: "Rozestup indikátoru stránek",
+                .folderWindowWidth: "Šířka okna složky",
+                .folderWindowHeight: "Výška okna složky",
+                .folderWindowSizeHint: "Platí pouze pro režim v okně; klasická celá obrazovka používá pevné rozložení.",
+                .appTitle: "LaunchNext",
+                .modifiedFrom: "Upraveno z LaunchNow verze 1.3.1",
+                .backgroundHint: "Automatický běh na pozadí: přidejte LaunchNext do Docku nebo použijte klávesovou zkratku k otevření okna aplikace",
+                .classicMode: "Klasický Launchpad (celá obrazovka)",
+                .iconSize: "Velikost ikon",
+                .iconsPerRow: "Ikon na řádek",
+                .rowsPerPage: "Řádků na stránku",
+                .iconHorizontalSpacing: "Vodorovný rozestup",
+                .iconVerticalSpacing: "Svislý rozestup",
+                .labelFontSize: "Velikost písma popisků",
+                .iconLabelFontWeight: "Tloušťka písma popisků",
+                .smaller: "Menší",
+                .larger: "Větší",
+                .predictDrop: "Předvídat pozici umístění",
+                .showLabels: "Zobrazit popisky pod ikonami",
+                .useLocalizedThirdPartyTitles: "Používat lokalizované názvy aplikací",
+                .enableAnimations: "Povolit animační přechody",
+                .hoverMagnification: "Zvětšení při najetí myší",
+                .hoverMagnificationScale: "Míra zvětšení při najetí",
+                .activePressEffect: "Odezva při stisknutí",
+                .activePressScale: "Míra zmenšení při stisku",
+                .animationDurationLabel: "Délka animačního přechodu",
+                .gridSizeChangeWarning: "Změna velikosti mřížky může přesunout některé ikony.",
+                .pageIndicatorHint: "Pokud je svislý rozestup málo výrazný, upravte rozestup indikátoru stránek níže.",
+                .rememberPageTitle: "Zapamatovat si naposledy otevřenou stránku",
+                .globalShortcutTitle: "Globální zkratka",
+                .shortcutSetButton: "Nastavit zkratku",
+                .shortcutSaveButton: "Uložit",
+                .shortcutClearButton: "Vymazat",
+                .shortcutNotSet: "Nenastaveno",
+                .shortcutListening: "Čekám na vstup…",
+                .shortcutCapturePrompt: "Stiskněte požadovanou kombinaci kláves. Pro zrušení stiskněte Esc.",
+                .shortcutNoModifierWarning: "Použití bez modifikační klávesy může kolidovat s jinými aplikacemi.",
+                .scrollSensitivity: "Citlivost posouvání",
+                .low: "Nízká",
+                .high: "Vysoká",
+                .importSystem: "Importovat systémový Launchpad",
+                .importLegacy: "Importovat starší verzi (.lmy)",
+                .importTip: "Tip: Klikněte na „Importovat systémový Launchpad“ pro přímý import ze systému.",
+                .exportData: "Exportovat data",
+                .importData: "Importovat data",
+                .refresh: "Obnovit",
+                .showQuickRefreshButton: "Zobrazit tlačítko rychlého obnovení",
+                .resetLayout: "Obnovit rozložení",
+                .resetAlertTitle: "Chcete opravdu obnovit rozložení?",
+                .resetAlertMessage: "Tímto se zcela obnoví rozložení: odstraní se všechny složky, vymaže uložené pořadí a znovu se načtou všechny aplikace. Všechny vlastní úpravy budou ztraceny.",
+                .resetConfirm: "Obnovit",
+                .cancel: "Zrušit",
+                .quit: "Ukončit",
+                .languagePickerTitle: "Jazyk",
+                .appearanceModeTitle: "Vzhled",
+                .appearanceModeFollowSystem: "Dle systému",
+                .appearanceModeLight: "Světlý",
+                .appearanceModeDark: "Tmavý",
+                .versionPrefix: "v",
+                .languageNameSystem: "Dle systému",
+                .languageNameEnglish: "Angličtina",
+                .languageNameChinese: "Čínština",
+                .languageNameJapanese: "Japonština",
+                .languageNameKorean: "Korejština",
+                .languageNameFrench: "Francouzština",
+                .languageNameSpanish: "Španělština",
+                .languageNameCzech: "Čeština",
+                .languageNameGerman: "Němčina",
+                .languageNameRussian: "Ruština",
+                .languageNameHindi: "Hindština",
+                .languageNameVietnamese: "Vietnamština",
+                .folderNamePlaceholder: "Název složky",
+                .viewOnGitHub: "Otevřít odkaz na projekt",
+                .chooseButton: "Vybrat",
+                .exportPanelMessage: "Vyberte cílovou složku pro export dat LaunchNext",
+                .importPrompt: "Importovat",
+                .importPanelMessage: "Vyberte složku, která byla dříve exportována z LaunchNext",
+                .legacyArchivePanelMessage: "Vyberte starší archiv Launchpadu (.lmy/.zip) nebo databázový soubor",
+                .importSuccessfulTitle: "Import úspěšný",
+                .importFailedTitle: "Import selhal",
+                .okButton: "OK",
+
+                // Update
+                .checkForUpdates: "Kontrola aktualizací",
+                .checkForUpdatesButton: "Zkontrolovat aktualizace",
+                .checkingForUpdates: "Kontrola aktualizací…",
+                .upToDate: "Používáte nejnovější verzi",
+                .updateAvailable: "Je k dispozici aktualizace",
+                .newVersion: "Nová verze:",
+                .downloadUpdate: "Stáhnout aktualizaci",
+                .updateCheckFailed: "Kontrola aktualizací se nezdařila",
+                .tryAgain: "Zkusit znovu",
+                .autoCheckForUpdates: "Automaticky kontrolovat aktualizace",
+                .versionParseError: "Chyba při zpracování verze"
             ],
             .german: [
                 .noAppsFound: "Keine Apps gefunden",
@@ -1126,6 +1256,7 @@ final class LocalizationManager {
                 .languageNameKorean: "Koreanisch",
                 .languageNameFrench: "Französisch",
                 .languageNameSpanish: "Spanisch",
+                .languageNameCzech: "Tschechisch",
                 .languageNameGerman: "Deutsch",
                 .languageNameRussian: "Russisch",
                 .languageNameHindi: "Hindi",
@@ -1245,6 +1376,7 @@ final class LocalizationManager {
                 .languageNameKorean: "Корейский",
                 .languageNameFrench: "Французский",
                 .languageNameSpanish: "Испанский",
+                .languageNameCzech: "Чешский",
                 .languageNameGerman: "Немецкий",
                 .languageNameRussian: "Русский",
                 .languageNameHindi: "Хинди",
@@ -1618,6 +1750,55 @@ final class LocalizationManager {
             .performancePlaceholderSubtitle: "Muy pronto podrás ver métricas aquí."
         ]) { _, new in new }
 
+        builder[.czech]?.merge([
+            .settingsSectionGeneral: "Obecné",
+            .settingsSectionGameController: "Herní ovladač",
+            .settingsSectionAppearance: "Vzhled",
+            .settingsSectionHiddenApps: "Skryté aplikace",
+            .settingsSectionSound: "Zvuk",
+            .settingsSectionTitles: "Názvy aplikací",
+            .settingsSectionPerformance: "Výkon",
+            .settingsSectionDevelopment: "Vývoj",
+            .settingsSectionAbout: "O aplikaci",
+            .developmentPlaceholderTitle: "Vývojářské hřiště",
+            .developmentPlaceholderSubtitle: "Vyhrazeno pro budoucí nástroje a experimentální funkce.",
+            .gameControllerPlaceholderTitle: "Podpora ovladače",
+            .gameControllerPlaceholderSubtitle: "Připoj ovladač a používej směrový kříž pro pohyb mezi aplikacemi. Další možnosti brzy přibudou.",
+            .gameControllerToggleTitle: "Povolit navigaci ovladačem",
+            .gameControllerStatusDisabled: "Navigace ovladačem je vypnutá.",
+            .gameControllerStatusNoController: "Zatím nebyl rozpoznán žádný ovladač.",
+            .gameControllerStatusConnectedFormat: "Připojené ovladače: %@",
+            .gameControllerQuickGuideTitle: "Rychlý průvodce",
+            .gameControllerQuickGuideDirection: "Použij směrový kříž nebo levou páčku k pohybu mezi ikonami.",
+            .gameControllerQuickGuideSelect: "Tlačítko A potvrdí výběr.",
+            .gameControllerQuickGuideCancel: "Tlačítko B (nebo Menu) zavře Launchpad.",
+            .soundToggleTitle: "Povolit zvukové efekty",
+            .soundToggleDescription: "Používej systémové zvuky macOS pro akce LaunchNext.",
+            .soundEventLaunchpadOpen: "Launchpad se otevírá",
+            .soundEventLaunchpadClose: "Launchpad se zavírá",
+            .soundEventNavigation: "Přesunout fokus",
+            .soundPreviewButton: "Náhled",
+            .soundOptionNone: "Žádný",
+            .voiceToggleTitle: "Povolit Voice Over",
+            .voiceToggleDescription: "Při navigaci klávesnicí nebo ovladačem bude čten název aktuální aplikace.",
+            .voiceNoteMutualExclusive: "Voice Over nahrazuje navigační zvuk hlasovým výstupem.",
+            .voiceAnnouncementAppFormat: "%@",
+            .voiceAnnouncementFolderFormat: "Složka: %@",
+            .backgroundStyleTitle: "Styl pozadí",
+            .backgroundStyleOptionBlur: "Rozostření",
+            .backgroundStyleOptionGlass: "Tekuté sklo",
+            .hiddenAppsAddButton: "Skrýt aplikaci",
+            .hiddenAppsEmptyTitle: "Zatím žádné skryté aplikace",
+            .hiddenAppsEmptySubtitle: "Vyber aplikaci, kterou chceš skrýt v LaunchNext.",
+            .hiddenAppsHint: "Skryté aplikace zmizí z mřížky. Tady je můžeš znovu zobrazit.",
+            .hiddenAppsRemoveButton: "Zviditelnit",
+            .hiddenAppsSearchPlaceholder: "Filtrovat skryté aplikace",
+            .accessibilityPlaceholderTitle: "Zpřístupnění",
+            .accessibilityPlaceholderSubtitle: "Nastavení zpřístupnění se připravuje; zatím zde nic není.",
+            .performancePlaceholderTitle: "Výkonový přehled",
+            .performancePlaceholderSubtitle: "Metriky budou brzy k dispozici."
+        ]) { _, new in new }
+        
         builder[.german]?.merge([
             .settingsSectionGeneral: "Allgemein",
             .settingsSectionGameController: "Gamecontroller",
@@ -1725,6 +1906,7 @@ final class LocalizationManager {
         hindiDictionary[.languageNameKorean] = "한국어"
         hindiDictionary[.languageNameFrench] = "Français"
         hindiDictionary[.languageNameSpanish] = "Español"
+        hindiDictionary[.languageNameCzech] = "Czech"
         hindiDictionary[.languageNameGerman] = "Deutsch"
         hindiDictionary[.languageNameRussian] = "Русский"
         hindiDictionary[.languageNameHindi] = "हिन्दी"
@@ -1901,6 +2083,8 @@ final class LocalizationManager {
             return "Français"
         case .spanish:
             return "Español"
+        case .czech:
+            return "Čeština"
         case .german:
             return "Deutsch"
         case .russian:
