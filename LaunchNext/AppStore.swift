@@ -736,7 +736,7 @@ final class AppStore: ObservableObject {
         return UserDefaults.standard.bool(forKey: rememberPageKey)
     }
 
-    @Published var globalHotKey: HotKeyConfiguration? = AppStore.loadHotKeyConfiguration() ?? HotKeyConfiguration(keyCode: 118, modifierFlags: []) {
+    @Published var globalHotKey: HotKeyConfiguration? = AppStore.loadHotKeyConfiguration() {
         didSet {
             persistHotKeyConfiguration()
             AppDelegate.shared?.updateGlobalHotKey(configuration: globalHotKey)
