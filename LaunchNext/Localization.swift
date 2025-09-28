@@ -99,6 +99,7 @@ enum LocalizationKey: String {
     case settingsSectionHiddenApps
     case settingsSectionGameController
     case settingsSectionSound
+    case settingsSectionUpdates
     case backgroundStyleTitle
     case backgroundStyleOptionBlur
     case backgroundStyleOptionGlass
@@ -195,6 +196,15 @@ enum LocalizationKey: String {
     case tryAgain
     case autoCheckForUpdates
     case versionParseError
+    case updatesRefreshButton
+    case openUpdaterConfig
+    case updaterConfirmTitle
+    case updaterConfirmMessage
+    case updaterTerminalHint
+    case updaterLaunchFailed
+    case updaterMissingBinary
+    case updaterNotExecutable
+    case updaterHoldPrompt
 }
 
 final class LocalizationManager {
@@ -321,7 +331,16 @@ final class LocalizationManager {
                 .updateCheckFailed: "Update check failed",
                 .tryAgain: "Try Again",
                 .autoCheckForUpdates: "Check for updates automatically",
-                .versionParseError: "Version parsing error"
+                .versionParseError: "Version parsing error",
+                .updatesRefreshButton: "Check again",
+                .openUpdaterConfig: "Open updater config",
+                .updaterConfirmTitle: "Install update via Terminal?",
+                .updaterConfirmMessage: "LaunchNext will quit and open the Terminal-based updater. The app will relaunch automatically after installation completes.",
+                .updaterTerminalHint: "The update runs in Terminal. LaunchNext will quit and relaunch automatically.",
+                .updaterLaunchFailed: "Failed to start updater (%@).",
+                .updaterMissingBinary: "Updater binary not found in the app bundle.",
+                .updaterNotExecutable: "Updater binary is not executable.",
+                .updaterHoldPrompt: "Press Enter to close this window. LaunchNext will reopen automatically."
             ],
             .vietnamese: [
                 .noAppsFound: "Không tìm thấy ứng dụng nào",
@@ -440,7 +459,9 @@ final class LocalizationManager {
                 .updateCheckFailed: "Kiểm tra cập nhật thất bại",
                 .tryAgain: "Thử lại",
                 .autoCheckForUpdates: "Tự động kiểm tra cập nhật",
-                .versionParseError: "Lỗi phân tích phiên bản"
+                .versionParseError: "Lỗi phân tích phiên bản",
+                .updatesRefreshButton: "Kiểm tra lại",
+                .openUpdaterConfig: "Mở tệp cấu hình cập nhật"
             ],
             .simplifiedChinese: [
                 .noAppsFound: "未找到任何应用",
@@ -558,8 +579,17 @@ final class LocalizationManager {
                 .downloadUpdate: "下载更新",
                 .updateCheckFailed: "更新检查失败",
                 .tryAgain: "重试",
-                .autoCheckForUpdates: "自动检查更新",
-                .versionParseError: "版本解析错误"
+            .autoCheckForUpdates: "自动检查更新",
+            .versionParseError: "版本解析错误",
+            .updatesRefreshButton: "重新检查",
+            .openUpdaterConfig: "打开更新配置文件",
+            .updaterConfirmTitle: "使用终端安装更新？",
+                .updaterConfirmMessage: "LaunchNext 将会退出并在终端中运行更新器。安装完成后会自动重新启动。",
+                .updaterTerminalHint: "更新会在终端中执行，LaunchNext 将退出并自动重新启动。",
+                .updaterLaunchFailed: "无法启动更新器（%@）。",
+                .updaterMissingBinary: "应用包内未找到更新器。",
+                .updaterNotExecutable: "更新器文件不可执行。",
+                .updaterHoldPrompt: "更新完成后，按回车键关闭窗口，LaunchNext 会自动重新打开。"
             ],
             .japanese: [
                 .noAppsFound: "アプリが見つかりません",
@@ -677,8 +707,17 @@ final class LocalizationManager {
                 .downloadUpdate: "アップデートをダウンロード",
                 .updateCheckFailed: "アップデート確認に失敗",
                 .tryAgain: "再試行",
-                .autoCheckForUpdates: "自動でアップデートを確認",
-                .versionParseError: "バージョン解析エラー"
+            .autoCheckForUpdates: "自動でアップデートを確認",
+            .versionParseError: "バージョン解析エラー",
+            .updatesRefreshButton: "再チェック",
+            .openUpdaterConfig: "アップデート設定ファイルを開く",
+            .updaterConfirmTitle: "ターミナルでアップデートをインストールしますか？",
+                .updaterConfirmMessage: "LaunchNext は終了し、ターミナル上のアップデーターが起動します。インストール完了後は自動的に再起動します。",
+                .updaterTerminalHint: "アップデートはターミナルで実行されます。LaunchNext は終了し、自動で再起動します。",
+                .updaterLaunchFailed: "アップデーターの起動に失敗しました（%@）。",
+                .updaterMissingBinary: "アプリ内にアップデーターが見つかりません。",
+                .updaterNotExecutable: "アップデーターが実行可能ではありません。",
+                .updaterHoldPrompt: "アップデート後は Enter キーを押してこのウィンドウを閉じてください。LaunchNext は自動的に再起動します。"
             ],
             .korean: [
                 .noAppsFound: "앱을 찾을 수 없어요",
@@ -796,8 +835,17 @@ final class LocalizationManager {
                 .downloadUpdate: "업데이트 다운로드",
                 .updateCheckFailed: "업데이트 확인에 실패했어요",
                 .tryAgain: "다시 시도하기",
-                .autoCheckForUpdates: "업데이트 자동 확인",
-                .versionParseError: "버전 분석 오류"
+            .autoCheckForUpdates: "업데이트 자동 확인",
+            .versionParseError: "버전 분석 오류",
+            .updatesRefreshButton: "다시 확인하기",
+            .openUpdaterConfig: "업데이트 구성 파일 열기",
+            .updaterConfirmTitle: "터미널에서 업데이트를 설치할까요?",
+                .updaterConfirmMessage: "LaunchNext가 종료되고 터미널 기반 업데이터가 실행됩니다. 설치가 끝나면 앱이 자동으로 다시 열립니다.",
+                .updaterTerminalHint: "업데이트는 터미널에서 진행됩니다. LaunchNext는 종료 후 자동으로 다시 실행됩니다.",
+                .updaterLaunchFailed: "업데이터를 시작하지 못했습니다(%@).",
+                .updaterMissingBinary: "앱 번들에서 업데이터를 찾을 수 없습니다.",
+                .updaterNotExecutable: "업데이터 파일을 실행할 수 없습니다.",
+                .updaterHoldPrompt: "업데이트가 끝나면 Enter 키를 눌러 창을 닫으세요. LaunchNext가 자동으로 다시 열립니다."
             ],
             .french: [
                 .noAppsFound: "Aucune application trouvée",
@@ -915,7 +963,16 @@ final class LocalizationManager {
                 .updateCheckFailed: "Échec de la vérification",
                 .tryAgain: "Réessayer",
                 .autoCheckForUpdates: "Vérification automatique",
-                .versionParseError: "Erreur d'analyse de version"
+                .versionParseError: "Erreur d'analyse de version",
+                .updatesRefreshButton: "Vérifier à nouveau",
+                .openUpdaterConfig: "Ouvrir le fichier de configuration des mises à jour",
+                .updaterConfirmTitle: "Installer la mise à jour via le Terminal ?",
+                .updaterConfirmMessage: "LaunchNext va se fermer et lancer l’outil de mise à jour dans le Terminal. L’application se rouvrira automatiquement une fois l’installation terminée.",
+                .updaterTerminalHint: "La mise à jour s’exécute dans le Terminal. LaunchNext se fermera puis se rouvrira automatiquement.",
+                .updaterLaunchFailed: "Échec du démarrage du programme de mise à jour (%@).",
+                .updaterMissingBinary: "Programme de mise à jour introuvable dans le bundle de l’app.",
+                .updaterNotExecutable: "Le programme de mise à jour n’est pas exécutable.",
+                .updaterHoldPrompt: "Une fois la mise à jour terminée, appuyez sur Entrée pour fermer cette fenêtre. LaunchNext se rouvrira automatiquement."
             ],
             .spanish: [
                 .noAppsFound: "No se encontraron apps",
@@ -1033,7 +1090,16 @@ final class LocalizationManager {
                 .updateCheckFailed: "Error al buscar actualizaciones",
                 .tryAgain: "Intentar de nuevo",
                 .autoCheckForUpdates: "Buscar actualizaciones automáticamente",
-                .versionParseError: "Error de análisis de versión"
+                .versionParseError: "Error de análisis de versión",
+                .updatesRefreshButton: "Comprobar de nuevo",
+                .openUpdaterConfig: "Abrir archivo de configuración de actualización",
+                .updaterConfirmTitle: "¿Instalar la actualización en Terminal?",
+                .updaterConfirmMessage: "LaunchNext se cerrará y abrirá el actualizador en Terminal. La aplicación se volverá a abrir automáticamente cuando termine la instalación.",
+                .updaterTerminalHint: "La actualización se ejecuta en Terminal. LaunchNext se cerrará y se abrirá de nuevo automáticamente.",
+                .updaterLaunchFailed: "No se pudo iniciar el actualizador (%@).",
+                .updaterMissingBinary: "No se encontró el actualizador dentro del paquete de la app.",
+                .updaterNotExecutable: "El actualizador no es ejecutable.",
+                .updaterHoldPrompt: "Cuando termine la actualización, pulse Intro para cerrar esta ventana. LaunchNext se abrirá automáticamente."
             ],
             .german: [
                 .noAppsFound: "Keine Apps gefunden",
@@ -1152,7 +1218,16 @@ final class LocalizationManager {
                 .updateCheckFailed: "Update-Prüfung fehlgeschlagen",
                 .tryAgain: "Erneut versuchen",
                 .autoCheckForUpdates: "Automatisch nach Updates suchen",
-                .versionParseError: "Versions-Parsing-Fehler"
+                .versionParseError: "Versions-Parsing-Fehler",
+                .updatesRefreshButton: "Erneut prüfen",
+                .openUpdaterConfig: "Updater-Konfigurationsdatei öffnen",
+                .updaterConfirmTitle: "Update über das Terminal installieren?",
+                .updaterConfirmMessage: "LaunchNext wird beendet und startet den Terminal-Updater. Nach Abschluss der Installation öffnet sich die App automatisch erneut.",
+                .updaterTerminalHint: "Das Update läuft im Terminal. LaunchNext beendet sich und startet danach automatisch erneut.",
+                .updaterLaunchFailed: "Updater konnte nicht gestartet werden (%@).",
+                .updaterMissingBinary: "Updater wurde im App-Paket nicht gefunden.",
+                .updaterNotExecutable: "Updater-Datei ist nicht ausführbar.",
+                .updaterHoldPrompt: "Nach dem Update Enter drücken, um dieses Fenster zu schließen. LaunchNext wird automatisch wieder geöffnet."
             ],
             .russian: [
                 .noAppsFound: "Приложения не найдены",
@@ -1271,7 +1346,9 @@ final class LocalizationManager {
                 .updateCheckFailed: "Ошибка проверки обновлений",
                 .tryAgain: "Попробовать снова",
                 .autoCheckForUpdates: "Автоматически проверять обновления",
-                .versionParseError: "Ошибка разбора версии"
+                .versionParseError: "Ошибка разбора версии",
+                .updatesRefreshButton: "Проверить снова",
+                .openUpdaterConfig: "Открыть файл конфигурации обновлений"
             ]
         ]
 
@@ -1284,6 +1361,7 @@ final class LocalizationManager {
             .settingsSectionTitles: "App titles",
             .settingsSectionPerformance: "Performance",
             .settingsSectionDevelopment: "Development",
+            .settingsSectionUpdates: "Updates",
             .settingsSectionAbout: "About",
             .developmentPlaceholderTitle: "Development playground",
             .developmentPlaceholderSubtitle: "Reserved for future tools and experimental features.",
@@ -1333,6 +1411,7 @@ final class LocalizationManager {
             .settingsSectionTitles: "应用名称",
             .settingsSectionPerformance: "性能",
             .settingsSectionDevelopment: "开发",
+            .settingsSectionUpdates: "更新",
             .settingsSectionAbout: "关于",
             .developmentPlaceholderTitle: "开发功能预留",
             .developmentPlaceholderSubtitle: "未来将用于调试工具或实验功能。",
@@ -1382,6 +1461,7 @@ final class LocalizationManager {
             .settingsSectionTitles: "アプリ名",
             .settingsSectionPerformance: "パフォーマンス",
             .settingsSectionDevelopment: "開発",
+            .settingsSectionUpdates: "アップデート",
             .settingsSectionAbout: "情報",
             .developmentPlaceholderTitle: "開発者プレイグラウンド",
             .developmentPlaceholderSubtitle: "将来的なツールや実験機能のためのスペースです。",
@@ -1431,6 +1511,7 @@ final class LocalizationManager {
             .settingsSectionTitles: "앱 이름",
             .settingsSectionPerformance: "성능",
             .settingsSectionDevelopment: "개발",
+            .settingsSectionUpdates: "업데이트",
             .settingsSectionAbout: "정보",
             .developmentPlaceholderTitle: "개발자 플레이그라운드",
             .developmentPlaceholderSubtitle: "향후 도구와 실험 기능을 위한 공간입니다.",
@@ -1480,6 +1561,7 @@ final class LocalizationManager {
             .settingsSectionTitles: "Tên ứng dụng",
             .settingsSectionPerformance: "Hiệu năng",
             .settingsSectionDevelopment: "Phát triển",
+            .settingsSectionUpdates: "Cập nhật",
             .settingsSectionAbout: "Giới thiệu",
             .developmentPlaceholderTitle: "Khu vực dành cho nhà phát triển",
             .developmentPlaceholderSubtitle: "Không gian cho các công cụ và tính năng thử nghiệm trong tương lai.",
@@ -1529,6 +1611,7 @@ final class LocalizationManager {
             .settingsSectionTitles: "Noms des applications",
             .settingsSectionPerformance: "Performances",
             .settingsSectionDevelopment: "Développement",
+            .settingsSectionUpdates: "Mises à jour",
             .settingsSectionAbout: "À propos",
             .developmentPlaceholderTitle: "Espace développeur",
             .developmentPlaceholderSubtitle: "Réservé aux outils et fonctionnalités expérimentales à venir.",
@@ -1578,6 +1661,7 @@ final class LocalizationManager {
             .settingsSectionTitles: "Nombres de apps",
             .settingsSectionPerformance: "Rendimiento",
             .settingsSectionDevelopment: "Desarrollo",
+            .settingsSectionUpdates: "Actualizaciones",
             .settingsSectionAbout: "Acerca de",
             .developmentPlaceholderTitle: "Zona de desarrollo",
             .developmentPlaceholderSubtitle: "Reservado para futuras herramientas y funciones experimentales.",
@@ -1627,6 +1711,7 @@ final class LocalizationManager {
             .settingsSectionTitles: "App-Namen",
             .settingsSectionPerformance: "Performance",
             .settingsSectionDevelopment: "Entwicklung",
+            .settingsSectionUpdates: "Updates",
             .settingsSectionAbout: "Info",
             .developmentPlaceholderTitle: "Entwicklerbereich",
             .developmentPlaceholderSubtitle: "Reserviert für zukünftige Tools und experimentelle Features.",
@@ -1676,6 +1761,7 @@ final class LocalizationManager {
             .settingsSectionTitles: "Названия приложений",
             .settingsSectionPerformance: "Производительность",
             .settingsSectionDevelopment: "Разработка",
+            .settingsSectionUpdates: "Обновления",
             .settingsSectionAbout: "О приложении",
             .developmentPlaceholderTitle: "Площадка для разработчиков",
             .developmentPlaceholderSubtitle: "Здесь появятся инструменты и экспериментальные возможности.",
@@ -1834,6 +1920,8 @@ final class LocalizationManager {
             .tryAgain: "पुनः प्रयास",
             .autoCheckForUpdates: "स्वचालित रूप से अपडेट जाँचें",
             .versionParseError: "संस्करण पार्स त्रुटि",
+            .updatesRefreshButton: "फिर से जाँचें",
+            .openUpdaterConfig: "अपडेट कॉन्फ़िग फ़ाइल खोलें",
             .settingsSectionGeneral: "सामान्य",
             .settingsSectionAppearance: "रूप व व्यवहार",
             .settingsSectionHiddenApps: "छिपे हुए ऐप्स",
@@ -1841,6 +1929,7 @@ final class LocalizationManager {
             .settingsSectionTitles: "ऐप नाम",
             .settingsSectionPerformance: "प्रदर्शन",
             .settingsSectionDevelopment: "विकास",
+            .settingsSectionUpdates: "अपडेट्स",
             .settingsSectionAbout: "परिचय",
             .developmentPlaceholderTitle: "डेवलपर प्लेग्राउंड",
             .developmentPlaceholderSubtitle: "आने वाले टूल और प्रयोगात्मक सुविधाओं के लिए आरक्षित।",

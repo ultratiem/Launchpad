@@ -106,6 +106,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
     case development
     case sound
     case gameController
+    case updates
     case about
 
     var id: String { rawValue }
@@ -120,6 +121,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         case .titles: return "text.badge.plus"
         case .hiddenApps: return "eye.slash"
         case .development: return "hammer"
+        case .updates: return "arrow.down.circle"
         case .about: return "info.circle"
         }
     }
@@ -143,6 +145,8 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
             colors = [Color(red: 0.29, green: 0.39, blue: 0.96), Color(red: 0.11, green: 0.67, blue: 0.91)]
         case .development:
             colors = [Color(red: 0.98, green: 0.58, blue: 0.16), Color(red: 0.96, green: 0.20, blue: 0.24)]
+        case .updates:
+            colors = [Color(red: 0.22, green: 0.78, blue: 0.55), Color(red: 0.10, green: 0.62, blue: 0.91)]
         case .about:
             colors = [Color(red: 0.54, green: 0.55, blue: 0.70), Color(red: 0.42, green: 0.44, blue: 0.60)]
         }
@@ -159,6 +163,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         case .titles: return .settingsSectionTitles
         case .hiddenApps: return .settingsSectionHiddenApps
         case .development: return .settingsSectionDevelopment
+        case .updates: return .settingsSectionUpdates
         case .about: return .settingsSectionAbout
         }
     }
@@ -222,6 +227,8 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
             soundSection
         case .gameController:
             gameControllerSection
+        case .updates:
+            updatesSection
         case .about:
             aboutSection
         }
@@ -707,7 +714,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.allowedFileTypes = ["app"]
+        panel.allowedContentTypes = [.applicationBundle]
         panel.title = appStore.localized(.customTitleAddButton)
         panel.message = appStore.localized(.customTitlePickerMessage)
         panel.prompt = appStore.localized(.chooseButton)
@@ -866,9 +873,6 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
                 TicTacToeBoard()
                     .frame(width: 130)
             }
-
-            // 更新检查
-            updateCheckSection
 
             Link(destination: URL(string: "https://github.com/RoversX/LaunchNext")!) {
                 Label(appStore.localized(.viewOnGitHub), systemImage: "arrow.up.right.square")
@@ -1557,7 +1561,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         panel.canChooseDirectories = false
         panel.canCreateDirectories = false
         panel.allowsMultipleSelection = false
-        panel.allowedFileTypes = ["lmy", "zip", "db"]
+        panel.allowedContentTypes = ["lmy", "zip", "db"].compactMap { UTType(filenameExtension: $0) }
         panel.prompt = appStore.localized(.importPrompt)
         panel.message = appStore.localized(.legacyArchivePanelMessage)
 
@@ -1583,8 +1587,10 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
     }
 
     // MARK: - Update Check Section
-    private var updateCheckSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+    private var updatesSection: some View {
+        let isChecking = appStore.updateState == .checking
+
+        return VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(appStore.localized(.checkForUpdates))
@@ -1635,12 +1641,19 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
                                     .lineLimit(3)
                             }
 
-                            Button(action: {
-                                appStore.openReleaseURL(release.url)
-                            }) {
+                            Button {
+                                appStore.launchUpdater(for: release)
+                            } label: {
                                 Label(appStore.localized(.downloadUpdate), systemImage: "arrow.down.circle")
                             }
                             .buttonStyle(.borderedProminent)
+
+                            Button {
+                                appStore.openReleaseURL(release.url)
+                            } label: {
+                                Label(appStore.localized(.viewOnGitHub), systemImage: "arrow.up.right.square")
+                            }
+                            .buttonStyle(.bordered)
                         }
 
                     case .failed(let error):
@@ -1668,17 +1681,25 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
                 Spacer()
             }
 
-#if DEBUG
             HStack(spacing: 12) {
-                Button("Simulate Update Available") {
-                    appStore.simulateUpdateAvailable()
+                Button {
+                    appStore.checkForUpdates()
+                } label: {
+                    Label(appStore.localized(.updatesRefreshButton), systemImage: "arrow.clockwise")
                 }
-                Button("Simulate Update Failure") {
-                    appStore.simulateUpdateFailure()
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(isChecking)
+
+                Button {
+                    appStore.openUpdaterConfigFile()
+                } label: {
+                    Label(appStore.localized(.openUpdaterConfig), systemImage: "doc.text")
                 }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
             }
-            .font(.footnote)
-#endif
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             // 自动检查更新开关
             Toggle(appStore.localized(.autoCheckForUpdates), isOn: $appStore.autoCheckForUpdates)

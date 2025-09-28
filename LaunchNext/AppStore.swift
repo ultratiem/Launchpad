@@ -3481,7 +3481,10 @@ final class AppStore: ObservableObject {
 
     private func fetchLatestRelease() async throws -> GitHubRelease {
         let url = URL(string: "https://api.github.com/repos/RoversX/LaunchNext/releases/latest")!
-        let (data, response) = try await URLSession.shared.data(from: url)
+        var request = URLRequest(url: url)
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse,
               httpResponse.statusCode == 200 else {
@@ -3515,9 +3518,149 @@ final class AppStore: ObservableObject {
         NSUserNotificationCenter.default.deliver(notification)
     }
 
-func openReleaseURL(_ url: URL) {
-    NSWorkspace.shared.open(url)
-}
+    @MainActor
+    func openUpdaterConfigFile() {
+        let fm = FileManager.default
+        let baseDirectory = fm.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library")
+            .appendingPathComponent("Application Support")
+            .appendingPathComponent("LaunchNext")
+            .appendingPathComponent("updates", isDirectory: true)
+        let configURL = baseDirectory.appendingPathComponent("config.json", isDirectory: false)
+        let supportedLanguages = ["de", "en", "es", "fr", "hi", "ja", "ko", "ru", "vi", "zh"]
+        let defaultConfig: [String: Any] = [
+            "language": "en",
+            "supported_languages": supportedLanguages
+        ]
+
+        do {
+            if !fm.fileExists(atPath: baseDirectory.path) {
+                try fm.createDirectory(at: baseDirectory, withIntermediateDirectories: true)
+            }
+            if !fm.fileExists(atPath: configURL.path) {
+                let data = try JSONSerialization.data(withJSONObject: defaultConfig, options: [.prettyPrinted, .sortedKeys])
+                try data.write(to: configURL)
+            } else {
+                let attributes = try fm.attributesOfItem(atPath: configURL.path)
+                let size = (attributes[.size] as? NSNumber)?.intValue ?? 0
+                if size == 0 {
+                    let data = try JSONSerialization.data(withJSONObject: defaultConfig, options: [.prettyPrinted, .sortedKeys])
+                    try data.write(to: configURL)
+                }
+            }
+            NSWorkspace.shared.open(configURL)
+        } catch {
+            presentUpdateFailureAlert(error.localizedDescription)
+        }
+    }
+
+    @MainActor
+    func launchUpdater(for release: UpdateRelease) {
+        let alert = NSAlert()
+        alert.messageText = localized(.updaterConfirmTitle)
+        alert.informativeText = localized(.updaterConfirmMessage)
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: localized(.downloadUpdate))
+        alert.addButton(withTitle: localized(.cancel))
+
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        do {
+            try startUpdaterProcess(tag: release.version)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                AppDelegate.shared?.quitWithFade()
+            }
+        } catch {
+            presentUpdaterLaunchFailure(error)
+        }
+    }
+
+    private func startUpdaterProcess(tag: String) throws {
+        guard let updaterURL = Bundle.main.url(
+            forResource: "launchnext_updater",
+            withExtension: "py",
+            subdirectory: "Updater"
+        ) else {
+            throw UpdaterLaunchError.missingBinary
+        }
+
+        let pythonPath = "/usr/bin/python3"
+        guard FileManager.default.isExecutableFile(atPath: pythonPath) else {
+            throw UpdaterLaunchError.notExecutable
+        }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        let assetPattern = "LaunchNext.*\\.zip"
+        let bundlePath = Bundle.main.bundlePath
+
+        var arguments: [String] = [
+            pythonPath,
+            updaterURL.path,
+            "--hold-window"
+        ]
+
+        if !tag.isEmpty {
+            arguments.append(contentsOf: ["--tag", tag])
+        }
+
+        arguments.append(contentsOf: [
+            "--asset-pattern", assetPattern,
+            "--install-dir", bundlePath
+        ])
+
+        let tempDir = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("LaunchNextUpdater", isDirectory: true)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        let scriptURL = tempDir.appendingPathComponent("run_updater.command", isDirectory: false)
+
+        let commandLine = arguments.map { $0.singleQuotedForShell }.joined(separator: " ")
+        let scriptContent = "#! /bin/bash\n\n\(commandLine)\n"
+        try scriptContent.write(to: scriptURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: NSNumber(value: 0o700)], ofItemAtPath: scriptURL.path)
+
+        process.arguments = ["-na", "Terminal", scriptURL.path]
+
+        do {
+            try process.run()
+        } catch {
+            throw UpdaterLaunchError.spawnFailed(error)
+        }
+    }
+
+    @MainActor
+    private func presentUpdaterLaunchFailure(_ error: Error) {
+        let alert = NSAlert()
+        alert.messageText = localized(.updateCheckFailed)
+        alert.alertStyle = .warning
+
+        let detail: String
+        if let launchError = error as? UpdaterLaunchError {
+            switch launchError {
+            case .missingBinary:
+                detail = localized(.updaterMissingBinary)
+            case .notExecutable:
+                detail = localized(.updaterNotExecutable)
+            case .spawnFailed(let underlying):
+                detail = underlying.localizedDescription
+            }
+        } else {
+            detail = error.localizedDescription
+        }
+
+        alert.informativeText = String(format: localized(.updaterLaunchFailed), detail)
+        alert.addButton(withTitle: localized(.okButton))
+        alert.runModal()
+    }
+
+    enum UpdaterLaunchError: Error {
+        case missingBinary
+        case notExecutable
+        case spawnFailed(Error)
+    }
+
+    func openReleaseURL(_ url: URL) {
+        NSWorkspace.shared.open(url)
+    }
 }
 
 private final class UpdateNotificationDelegate: NSObject, NSUserNotificationCenterDelegate {
@@ -3541,25 +3684,11 @@ private final class UpdateNotificationDelegate: NSObject, NSUserNotificationCent
     }
 }
 
-#if DEBUG
-extension AppStore {
-    func simulateUpdateAvailable() {
-        let dummy = UpdateRelease(
-            version: "999.0.0",
-            url: URL(string: "https://github.com/RoversX/LaunchNext/releases/latest")!,
-            notes: ""
-        )
-        updateState = .updateAvailable(dummy)
-        presentUpdateAlert(for: dummy)
-    }
-
-    func simulateUpdateFailure() {
-        let message = "模拟更新失败。"
-        updateState = .failed(message)
-        presentUpdateFailureAlert(message)
+private extension String {
+    var singleQuotedForShell: String {
+        "'" + self.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 }
-#endif
 
 extension NSEvent.ModifierFlags {
     static let shortcutComponents: NSEvent.ModifierFlags = [.command, .option, .control, .shift]

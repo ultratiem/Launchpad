@@ -70,6 +70,7 @@
 				0D1B0B3C2E4CDE460083EEF9 /* Sources */,
 				0D1B0B3D2E4CDE460083EEF9 /* Frameworks */,
 				0D1B0B3E2E4CDE460083EEF9 /* Resources */,
+				E1C2D3A42F56B78900ABCDEF /* Run Script (Updater) */,
 			);
 			buildRules = (
 			);
@@ -140,6 +141,29 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		E1C2D3A42F56B78900ABCDEF /* Run Script (Updater) */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/UpdaterScripts/launchnext_updater.py",
+			);
+			name = "Run Script (Updater)";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Updater/launchnext_updater.py",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -euo pipefail\n\nif [[ \"${ENABLE_PREVIEWS:-NO}\" == \"YES\" ]]; then\n  echo 'SwiftUI Preview: skip updater script copy'\n  exit 0\nfi\n\nSCRIPT_SRC=\"${SRCROOT}/UpdaterScripts/launchnext_updater.py\"\nif [[ ! -f \"${SCRIPT_SRC}\" ]]; then\n  echo \"Updater script not found: ${SCRIPT_SRC}\" >&2\n  exit 1\nfi\n\nDEST_DIR=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Updater\"\nmkdir -p \"${DEST_DIR}\"\ncp \"${SCRIPT_SRC}\" \"${DEST_DIR}/launchnext_updater.py\"\nchmod +x \"${DEST_DIR}/launchnext_updater.py\"\n\necho \"Updater script copied to ${DEST_DIR}\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		0D1B0B3C2E4CDE460083EEF9 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -209,7 +233,7 @@
 				DEVELOPMENT_TEAM = 6V3LHNB5K8;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -273,7 +297,7 @@
 				DEVELOPMENT_TEAM = 6V3LHNB5K8;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -313,7 +337,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.7;
+				MARKETING_VERSION = 1.0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = LaunchNext;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -349,7 +373,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.7;
+				MARKETING_VERSION = 1.0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = LaunchNext;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
