@@ -93,8 +93,8 @@ struct SettingsView: View {
         }
     }
 
-    private func getVersion() -> String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "未知"
+private func getVersion() -> String {
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "未知"
 }
 
 private enum SettingsSection: String, CaseIterable, Identifiable {

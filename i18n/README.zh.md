@@ -1,6 +1,6 @@
 # LaunchNext
 
-**语言**: [English](../README.md) | [中文](README.zh.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Français](README.fr.md) | [Español](README.es.md) | [Deutsch](README.de.md) | [Русский](README.ru.md) | [हिन्दी](README.hi.md) | [Tiếng Việt](README.vi.md)
+**语言**: [English](../README.md) | [中文](README.zh.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Français](README.fr.md) | [Español](README.es.md) | [Deutsch](README.de.md) | [Русский](README.ru.md) | [हिन्दी](README.hi.md) | [Tiếng Việt](README.vi.md) | [Italiano](README.it.md) | [Čeština](README.cs.md)
 
 ## 📥 下载
 
@@ -28,7 +28,7 @@ sudo xattr -r -d com.apple.quarantine /Applications/LaunchNext.app
 ### LaunchNext 提供的功能
 - ✅ **一键导入老系统 Launchpad** - 直接读取你的原生 Launchpad SQLite 数据库 (`/private$(getconf DARWIN_USER_DIR)com.apple.dock.launchpad/db/db`) 完美重现你现有的文件夹、应用位置和布局
 - ✅ **经典 Launchpad 体验** - 与深受喜爱的原版界面完全一致
-- ✅ **多语言支持** - 完整国际化支持，包含英文、中文、日文、法文和西班牙文
+- ✅ **多语言支持** - 完整国际化支持，包含英文、中文、日文、韩文、法文、西班牙文、意大利文、捷克文、德文、俄文、印地文和越南文
 - ✅ **隐藏图标标签** - 当你不需要应用名称时提供简洁的极简视图
 - ✅ **自定义图标大小** - 根据你的偏好调整图标尺寸
 - ✅ **智能文件夹管理** - 像以前一样创建和整理文件夹
@@ -221,10 +221,3 @@ xcodebuild -project LaunchNext.xcodeproj -scheme LaunchNext -configuration Relea
 **LaunchNext** - 重新掌控你的应用启动器 🚀
 
 *为拒绝在自定义方面妥协的 macOS 用户而构建。*
-
-## 开发工具
-
-此项目使用以下工具协助开发：
-- Claude Code - AI 驱动的开发助手
-- Cursor
-- OpenAI Codex Cli - 代码生成和优化

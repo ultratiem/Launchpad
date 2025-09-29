@@ -8,6 +8,7 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     case korean = "ko"
     case french = "fr"
     case spanish = "es"
+    case italian = "it"
     case czech = "cs"
     case german = "de"
     case russian = "ru"
@@ -24,6 +25,7 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         if lower.hasPrefix("ko") { return .korean }
         if lower.hasPrefix("fr") { return .french }
         if lower.hasPrefix("es") { return .spanish }
+        if lower.hasPrefix("it") { return .italian }
         if lower.hasPrefix("cs") { return .czech }
         if lower.hasPrefix("de") { return .german }
         if lower.hasPrefix("ru") { return .russian }
@@ -172,6 +174,7 @@ enum LocalizationKey: String {
     case languageNameKorean
     case languageNameFrench
     case languageNameSpanish
+    case languageNameItalian
     case languageNameCzech
     case languageNameGerman
     case languageNameRussian
@@ -308,6 +311,7 @@ final class LocalizationManager {
                 .languageNameKorean: "韩语",
                 .languageNameFrench: "法语",
                 .languageNameSpanish: "西班牙语",
+                .languageNameItalian: "意大利语",
                 .languageNameCzech: "捷克语",
                 .languageNameGerman: "德语",
                 .languageNameRussian: "俄语",
@@ -437,6 +441,7 @@ final class LocalizationManager {
                 .languageNameKorean: "Tiếng Hàn",
                 .languageNameFrench: "Tiếng Pháp",
                 .languageNameSpanish: "Tiếng Tây Ban Nha",
+                .languageNameItalian: "Tiếng Ý",
                 .languageNameCzech: "Tiếng Séc",
                 .languageNameGerman: "Tiếng Đức",
                 .languageNameRussian: "Tiếng Nga",
@@ -559,6 +564,7 @@ final class LocalizationManager {
                 .languageNameKorean: "韩语",
                 .languageNameFrench: "フランス語",
                 .languageNameSpanish: "スペイン語",
+                .languageNameItalian: "イタリア語",
                 .languageNameCzech: "捷克语",
                 .languageNameGerman: "ドイツ語",
                 .languageNameRussian: "俄语",
@@ -688,6 +694,7 @@ final class LocalizationManager {
                 .languageNameKorean: "Coréen",
                 .languageNameFrench: "Français",
                 .languageNameSpanish: "Espagnol",
+                .languageNameItalian: "Italien",
                 .languageNameCzech: "Tchèque",
                 .languageNameGerman: "Allemand",
                 .languageNameRussian: "Russe",
@@ -817,6 +824,7 @@ final class LocalizationManager {
                 .languageNameKorean: "한국어",
                 .languageNameFrench: "프랑스어",
                 .languageNameSpanish: "스페인어",
+                .languageNameItalian: "이탈리아어",
                 .languageNameCzech: "체코어",
                 .languageNameGerman: "독일어",
                 .languageNameRussian: "러시아어",
@@ -946,6 +954,7 @@ final class LocalizationManager {
                 .languageNameKorean: "韩语",
                 .languageNameFrench: "Français",
                 .languageNameSpanish: "Español",
+                .languageNameItalian: "Italiano",
                 .languageNameCzech: "Tchèque",
                 .languageNameGerman: "Deutsch",
                 .languageNameRussian: "Русский",
@@ -1074,6 +1083,7 @@ final class LocalizationManager {
                 .languageNameKorean: "한국어",
                 .languageNameFrench: "Français",
                 .languageNameSpanish: "Español",
+                .languageNameItalian: "Italiano",
                 .languageNameCzech: "Checo",
                 .languageNameGerman: "Deutsch",
                 .languageNameRussian: "Русский",
@@ -1202,6 +1212,7 @@ final class LocalizationManager {
                 .languageNameKorean: "Korejština",
                 .languageNameFrench: "Francouzština",
                 .languageNameSpanish: "Španělština",
+                .languageNameItalian: "Italština",
                 .languageNameCzech: "Čeština",
                 .languageNameGerman: "Němčina",
                 .languageNameRussian: "Ruština",
@@ -1322,6 +1333,7 @@ final class LocalizationManager {
                 .languageNameKorean: "Koreanisch",
                 .languageNameFrench: "Französisch",
                 .languageNameSpanish: "Spanisch",
+                .languageNameItalian: "Italienisch",
                 .languageNameCzech: "Tschechisch",
                 .languageNameGerman: "Deutsch",
                 .languageNameRussian: "Russisch",
@@ -1449,9 +1461,10 @@ final class LocalizationManager {
                 .languageNameChinese: "Китайский",
                 .languageNameJapanese: "Японский",
                 .languageNameKorean: "Корейский",
-                .languageNameFrench: "Французский",
-                .languageNameSpanish: "Испанский",
-                .languageNameCzech: "Чешский",
+            .languageNameFrench: "Французский",
+            .languageNameSpanish: "Испанский",
+            .languageNameItalian: "Итальянский",
+            .languageNameCzech: "Чешский",
                 .languageNameGerman: "Немецкий",
                 .languageNameRussian: "Русский",
                 .languageNameHindi: "Хинди",
@@ -1734,6 +1747,10 @@ final class LocalizationManager {
             .performancePlaceholderSubtitle: "Các chỉ số sẽ sớm xuất hiện tại đây."
         ]) { _, new in new }
 
+        if builder[.italian] == nil {
+            builder[.italian] = [:]
+        }
+
         builder[.french]?.merge([
             .settingsSectionGeneral: "Général",
             .settingsSectionGameController: "Manette",
@@ -1782,6 +1799,144 @@ final class LocalizationManager {
             .accessibilityPlaceholderSubtitle: "Les paramètres d’accessibilité apparaîtront ici prochainement.",
             .performancePlaceholderTitle: "Tableau de bord des performances",
             .performancePlaceholderSubtitle: "Les indicateurs apparaîtront ici prochainement."
+        ]) { _, new in new }
+
+        builder[.italian]?.merge([
+            .settingsSectionGeneral: "Generali",
+            .settingsSectionGameController: "Controller di gioco",
+            .settingsSectionAppearance: "Aspetto e comportamento",
+            .settingsSectionHiddenApps: "App nascoste",
+            .settingsSectionSound: "Audio",
+            .settingsSectionTitles: "Nomi app",
+            .settingsSectionPerformance: "Prestazioni",
+            .settingsSectionDevelopment: "Sviluppo",
+            .settingsSectionUpdates: "Aggiornamenti",
+            .settingsSectionAbout: "Informazioni",
+            .developmentPlaceholderTitle: "Area di sviluppo",
+            .developmentPlaceholderSubtitle: "Riservato a futuri strumenti e funzionalità sperimentali.",
+            .gameControllerPlaceholderTitle: "Supporto controller",
+            .gameControllerPlaceholderSubtitle: "Collega un controller e usa la croce direzionale per muoverti tra le app. Altre opzioni arriveranno presto.",
+            .gameControllerToggleTitle: "Abilita navigazione con controller",
+            .gameControllerStatusDisabled: "La navigazione con controller è disattivata.",
+            .gameControllerStatusNoController: "Nessun controller rilevato.",
+            .gameControllerStatusConnectedFormat: "Controller collegati: %@",
+            .gameControllerQuickGuideTitle: "Guida rapida",
+            .gameControllerQuickGuideDirection: "Usa la croce direzionale o lo stick sinistro per muoverti tra le icone.",
+            .gameControllerQuickGuideSelect: "Il pulsante A conferma la selezione.",
+            .gameControllerQuickGuideCancel: "Il pulsante B (o Menu) chiude Launchpad.",
+            .soundToggleTitle: "Attiva effetti sonori",
+            .soundToggleDescription: "Usa i suoni di sistema di macOS per le azioni di LaunchNext.",
+            .soundEventLaunchpadOpen: "Apri Launchpad",
+            .soundEventLaunchpadClose: "Chiudi Launchpad",
+            .soundEventNavigation: "Sposta focus",
+            .soundPreviewButton: "Anteprima",
+            .soundOptionNone: "Nessuno",
+            .voiceToggleTitle: "Abilita Voice Over",
+            .voiceToggleDescription: "Voice Over annuncia il nome dell’app selezionata durante la navigazione con tastiera o controller.",
+            .voiceNoteMutualExclusive: "Attivando Voice Over il suono di navigazione viene sostituito dalla voce.",
+            .voiceAnnouncementAppFormat: "%@",
+            .voiceAnnouncementFolderFormat: "Cartella: %@",
+            .pageIndicatorOffsetLabel: "Spaziatura indicatore di pagina",
+            .backgroundStyleTitle: "Stile di sfondo",
+            .backgroundStyleOptionBlur: "Sfocatura",
+            .backgroundStyleOptionGlass: "Vetro liquido",
+            .hiddenAppsAddButton: "Nascondi app",
+            .hiddenAppsEmptyTitle: "Nessuna app nascosta",
+            .hiddenAppsEmptySubtitle: "Scegli un’app per nasconderla dalla griglia di LaunchNext.",
+            .hiddenAppsHint: "Le app nascoste scompaiono dalla griglia. Ripristinale qui.",
+            .hiddenAppsRemoveButton: "Mostra",
+            .hiddenAppsSearchPlaceholder: "Cerca app nascoste",
+            .accessibilityPlaceholderTitle: "Accessibilità",
+            .accessibilityPlaceholderSubtitle: "Le opzioni di accessibilità arriveranno a breve.",
+            .performancePlaceholderTitle: "Pannello prestazioni",
+            .performancePlaceholderSubtitle: "Le metriche appariranno qui a breve.",
+            .appTitle: "LaunchNext",
+            .modifiedFrom: "Derivato da LaunchNow versione 1.3.1",
+            .backgroundHint: "Per eseguirlo in background aggiungi LaunchNext al Dock o usa una scorciatoia da tastiera per aprire la finestra dell’app.",
+            .classicMode: "Launchpad classico (schermo intero)",
+            .iconSize: "Dimensione icone",
+            .iconsPerRow: "Icone per riga",
+            .rowsPerPage: "Righe per pagina",
+            .iconHorizontalSpacing: "Spaziatura orizzontale",
+            .iconVerticalSpacing: "Spaziatura verticale",
+            .labelFontSize: "Dimensione etichette",
+            .iconLabelFontWeight: "Spessore etichette",
+            .smaller: "Più piccolo",
+            .larger: "Più grande",
+            .predictDrop: "Prevedi posizione di rilascio",
+            .showLabels: "Mostra etichette sotto le icone",
+            .useLocalizedThirdPartyTitles: "Usa nomi localizzati delle app",
+            .enableAnimations: "Abilita animazione di scorrimento",
+            .hoverMagnification: "Ingrandimento al passaggio",
+            .hoverMagnificationScale: "Fattore di ingrandimento",
+            .activePressEffect: "Feedback alla pressione",
+            .activePressScale: "Scala alla pressione",
+            .animationDurationLabel: "Durata animazione di scorrimento",
+            .gridSizeChangeWarning: "Cambiare la griglia può spostare alcune icone.",
+            .pageIndicatorHint: "Se lo spazio verticale è poco evidente, regola qui l’indicatore di pagina.",
+            .rememberPageTitle: "Ricorda l’ultima pagina aperta",
+            .globalShortcutTitle: "Scorciatoia globale",
+            .shortcutSetButton: "Imposta scorciatoia",
+            .shortcutSaveButton: "Salva",
+            .shortcutClearButton: "Pulisci",
+            .shortcutNotSet: "Non impostata",
+            .shortcutListening: "In ascolto…",
+            .shortcutCapturePrompt: "Premi la combinazione desiderata. Esc per annullare.",
+            .shortcutNoModifierWarning: "Senza tasti modificatori potrebbe entrare in conflitto con altre app.",
+            .scrollSensitivity: "Sensibilità di scorrimento",
+            .low: "Bassa",
+            .high: "Alta",
+            .importSystem: "Importa Launchpad di sistema",
+            .importLegacy: "Importa archivio legacy (.lmy)",
+            .importTip: "Suggerimento: fai clic su \"Importa Launchpad di sistema\" per importare direttamente dal Launchpad di macOS.",
+            .exportData: "Esporta dati",
+            .importData: "Importa dati",
+            .refresh: "Aggiorna",
+            .showQuickRefreshButton: "Mostra pulsante aggiornamento rapido",
+            .resetLayout: "Reimposta layout",
+            .resetAlertTitle: "Reimpostare il layout?",
+            .resetAlertMessage: "Questo reimposterà completamente il layout: rimuoverà cartelle, ordine salvato e analizzerà nuovamente le app.",
+            .resetConfirm: "Reimposta",
+            .cancel: "Annulla",
+            .quit: "Esci",
+            .appearanceModeTitle: "Tema",
+            .appearanceModeFollowSystem: "Segui sistema",
+            .appearanceModeLight: "Chiaro",
+            .appearanceModeDark: "Scuro",
+            .folderWindowWidth: "Larghezza finestra cartella",
+            .folderWindowHeight: "Altezza finestra cartella",
+            .folderWindowSizeHint: "Vale solo per la modalità finestra; il classico schermo intero usa un layout fisso.",
+            .versionPrefix: "v",
+            .folderNamePlaceholder: "Nome cartella",
+            .viewOnGitHub: "Apri link del progetto",
+            .chooseButton: "Scegli",
+            .exportPanelMessage: "Scegli una cartella di destinazione per esportare i dati di LaunchNext",
+            .importPrompt: "Importa",
+            .importPanelMessage: "Seleziona una cartella esportata in precedenza da LaunchNext",
+            .legacyArchivePanelMessage: "Seleziona un archivio Launchpad legacy (.lmy/.zip) o un file db",
+            .importSuccessfulTitle: "Importazione riuscita",
+            .importFailedTitle: "Importazione non riuscita",
+            .okButton: "OK",
+            .checkForUpdates: "Verifica aggiornamenti",
+            .checkForUpdatesButton: "Verifica aggiornamenti",
+            .checkingForUpdates: "Verifica aggiornamenti in corso…",
+            .upToDate: "Hai già la versione più recente",
+            .updateAvailable: "Aggiornamento disponibile",
+            .newVersion: "Nuova versione:",
+            .downloadUpdate: "Scarica aggiornamento",
+            .updateCheckFailed: "Verifica aggiornamenti non riuscita",
+            .tryAgain: "Riprova",
+            .autoCheckForUpdates: "Verifica aggiornamenti automaticamente",
+            .versionParseError: "Errore di lettura della versione",
+            .updatesRefreshButton: "Controlla di nuovo",
+            .openUpdaterConfig: "Apri file di configurazione dell’updater",
+            .updaterConfirmTitle: "Installare l’aggiornamento tramite Terminale?",
+            .updaterConfirmMessage: "LaunchNext verrà chiuso e si aprirà l’updater nel Terminale. L’app si riaprirà automaticamente al termine dell’installazione.",
+            .updaterTerminalHint: "L’aggiornamento viene eseguito nel Terminale. LaunchNext verrà chiuso e si riaprirà automaticamente.",
+            .updaterLaunchFailed: "Impossibile avviare l’updater (%@).",
+            .updaterMissingBinary: "Binario dell’updater non trovato nel bundle dell’app.",
+            .updaterNotExecutable: "Il binario dell’updater non è eseguibile.",
+            .updaterHoldPrompt: "Premi Invio per chiudere questa finestra. LaunchNext si riaprirà automaticamente."
         ]) { _, new in new }
 
         builder[.spanish]?.merge([
@@ -1992,6 +2147,7 @@ final class LocalizationManager {
         hindiDictionary[.languageNameKorean] = "한국어"
         hindiDictionary[.languageNameFrench] = "Français"
         hindiDictionary[.languageNameSpanish] = "Español"
+        hindiDictionary[.languageNameItalian] = "इतालवी"
         hindiDictionary[.languageNameCzech] = "Czech"
         hindiDictionary[.languageNameGerman] = "Deutsch"
         hindiDictionary[.languageNameRussian] = "Русский"
@@ -2172,6 +2328,8 @@ final class LocalizationManager {
             return "Français"
         case .spanish:
             return "Español"
+        case .italian:
+            return "Italiano"
         case .czech:
             return "Čeština"
         case .german:
