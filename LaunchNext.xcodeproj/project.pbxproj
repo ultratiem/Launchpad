@@ -150,17 +150,26 @@
 			inputFileListPaths = (
 			);
 			inputPaths = (
-				"$(SRCROOT)/UpdaterScripts/launchnext_updater.py",
+				"$(SRCROOT)/UpdaterScripts/SwiftUpdater/Package.swift",
+				"$(SRCROOT)/UpdaterScripts/SwiftUpdater/Sources/SwiftUpdater/Arguments.swift",
+				"$(SRCROOT)/UpdaterScripts/SwiftUpdater/Sources/SwiftUpdater/Config.swift",
+				"$(SRCROOT)/UpdaterScripts/SwiftUpdater/Sources/SwiftUpdater/Downloader.swift",
+				"$(SRCROOT)/UpdaterScripts/SwiftUpdater/Sources/SwiftUpdater/Errors.swift",
+				"$(SRCROOT)/UpdaterScripts/SwiftUpdater/Sources/SwiftUpdater/GitHubAPI.swift",
+				"$(SRCROOT)/UpdaterScripts/SwiftUpdater/Sources/SwiftUpdater/Installer.swift",
+				"$(SRCROOT)/UpdaterScripts/SwiftUpdater/Sources/SwiftUpdater/Localization.swift",
+				"$(SRCROOT)/UpdaterScripts/SwiftUpdater/Sources/SwiftUpdater/NCursesUI.swift",
+				"$(SRCROOT)/UpdaterScripts/SwiftUpdater/Sources/SwiftUpdater/SwiftUpdater.swift",
 			);
 			name = "Run Script (Updater)";
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Updater/launchnext_updater.py",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Updater/SwiftUpdater",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "set -euo pipefail\n\nif [[ \"${ENABLE_PREVIEWS:-NO}\" == \"YES\" ]]; then\n  echo 'SwiftUI Preview: skip updater script copy'\n  exit 0\nfi\n\nSCRIPT_SRC=\"${SRCROOT}/UpdaterScripts/launchnext_updater.py\"\nif [[ ! -f \"${SCRIPT_SRC}\" ]]; then\n  echo \"Updater script not found: ${SCRIPT_SRC}\" >&2\n  exit 1\nfi\n\nDEST_DIR=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Updater\"\nmkdir -p \"${DEST_DIR}\"\ncp \"${SCRIPT_SRC}\" \"${DEST_DIR}/launchnext_updater.py\"\nchmod +x \"${DEST_DIR}/launchnext_updater.py\"\n\necho \"Updater script copied to ${DEST_DIR}\"\n";
+			shellPath = /bin/bash;
+			shellScript = "set -euo pipefail\n\nif [[ \"${ENABLE_PREVIEWS:-NO}\" == \"YES\" ]]; then\n  echo 'SwiftUI Preview: skip updater build'\n  exit 0\nfi\n\nUPDATER_DIR=\"${SRCROOT}/UpdaterScripts/SwiftUpdater\"\nDEST_DIR=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Updater\"\nSOURCE_BIN=\"${UPDATER_DIR}/.build/apple/Products/Release/SwiftUpdater\"\nLEGACY_BIN=\"${UPDATER_DIR}/.build/release/SwiftUpdater\"\n\nmkdir -p \"${DEST_DIR}\"\n\nfunction sign_binary {\n  /usr/bin/codesign --force --sign - --preserve-metadata=entitlements,requirements \"$1\"\n}\n\nif [[ -f \"${SOURCE_BIN}\" ]]; then\n  echo \"Using SwiftUpdater at ${SOURCE_BIN}\"\n  cp \"${SOURCE_BIN}\" \"${DEST_DIR}/SwiftUpdater\"\n  chmod +x \"${DEST_DIR}/SwiftUpdater\"\n  sign_binary \"${DEST_DIR}/SwiftUpdater\"\n  exit 0\nfi\n\nif [[ -f \"${LEGACY_BIN}\" ]]; then\n  echo \"Using SwiftUpdater at ${LEGACY_BIN}\"\n  cp \"${LEGACY_BIN}\" \"${DEST_DIR}/SwiftUpdater\"\n  chmod +x \"${DEST_DIR}/SwiftUpdater\"\n  sign_binary \"${DEST_DIR}/SwiftUpdater\"\n  exit 0\nfi\n\n>&2 echo \"error: SwiftUpdater binary not found. Run 'swift build --configuration release --arch arm64 --arch x86_64 --product SwiftUpdater' in UpdaterScripts/SwiftUpdater\"\nexit 1\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -337,7 +346,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.8;
+				MARKETING_VERSION = 1.0.9;
 				PRODUCT_BUNDLE_IDENTIFIER = LaunchNext;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -373,7 +382,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.8;
+				MARKETING_VERSION = 1.0.9;
 				PRODUCT_BUNDLE_IDENTIFIER = LaunchNext;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;

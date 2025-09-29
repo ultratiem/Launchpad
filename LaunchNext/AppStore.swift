@@ -3577,28 +3577,24 @@ final class AppStore: ObservableObject {
 
     private func startUpdaterProcess(tag: String) throws {
         guard let updaterURL = Bundle.main.url(
-            forResource: "launchnext_updater",
-            withExtension: "py",
+            forResource: "SwiftUpdater",
+            withExtension: nil,
             subdirectory: "Updater"
         ) else {
             throw UpdaterLaunchError.missingBinary
         }
 
-        let pythonPath = "/usr/bin/python3"
-        guard FileManager.default.isExecutableFile(atPath: pythonPath) else {
+        guard FileManager.default.isExecutableFile(atPath: updaterURL.path) else {
             throw UpdaterLaunchError.notExecutable
         }
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+
         let assetPattern = "LaunchNext.*\\.zip"
         let bundlePath = Bundle.main.bundlePath
 
-        var arguments: [String] = [
-            pythonPath,
-            updaterURL.path,
-            "--hold-window"
-        ]
+        var arguments: [String] = ["-na", "Terminal", "--args", updaterURL.path]
 
         if !tag.isEmpty {
             arguments.append(contentsOf: ["--tag", tag])
@@ -3606,19 +3602,11 @@ final class AppStore: ObservableObject {
 
         arguments.append(contentsOf: [
             "--asset-pattern", assetPattern,
-            "--install-dir", bundlePath
+            "--install-dir", bundlePath,
+            "--hold-window"
         ])
 
-        let tempDir = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("LaunchNextUpdater", isDirectory: true)
-        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-        let scriptURL = tempDir.appendingPathComponent("run_updater.command", isDirectory: false)
-
-        let commandLine = arguments.map { $0.singleQuotedForShell }.joined(separator: " ")
-        let scriptContent = "#! /bin/bash\n\n\(commandLine)\n"
-        try scriptContent.write(to: scriptURL, atomically: true, encoding: .utf8)
-        try FileManager.default.setAttributes([.posixPermissions: NSNumber(value: 0o700)], ofItemAtPath: scriptURL.path)
-
-        process.arguments = ["-na", "Terminal", scriptURL.path]
+        process.arguments = arguments
 
         do {
             try process.run()
@@ -3681,12 +3669,6 @@ private final class UpdateNotificationDelegate: NSObject, NSUserNotificationCent
             return
         }
         openHandler(url)
-    }
-}
-
-private extension String {
-    var singleQuotedForShell: String {
-        "'" + self.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 }
 

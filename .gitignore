@@ -12,6 +12,10 @@ DerivedData/
 .AppleDouble
 .LSOverride
 
+# Swift updater build artifacts
+UpdaterScripts/SwiftUpdater/.build/
+UpdaterScripts/SwiftUpdater/.build-*/
+
 # Archives
 *.xcarchive
 
