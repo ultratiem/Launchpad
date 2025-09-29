@@ -12,6 +12,7 @@
 
 /* Begin PBXFileReference section */
 		0D1B0B402E4CDE460083EEF9 /* LaunchNext.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LaunchNext.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		690FA1FB2E88822200948FA6 /* cs */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = cs; path = cs.lproj/Localizable.strings; sourceTree = "<group>"; };
 		A1E2B5C12F4A8A1B00F12345 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		A1E2B5C22F4A8A1B00F12345 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		A1E2B5C32F4A8A1B00F12345 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -113,6 +114,7 @@
 				ko,
 				fr,
 				es,
+				cs,
 				de,
 				ru,
 				hi,
@@ -193,6 +195,7 @@
 				A1E2B5C42F4A8A1B00F12345 /* ko */,
 				A1E2B5C52F4A8A1B00F12345 /* fr */,
 				A1E2B5C62F4A8A1B00F12345 /* es */,
+				690FA1FB2E88822200948FA6 /* cs */,
 				A1E2B5C72F4A8A1B00F12345 /* de */,
 				A1E2B5C82F4A8A1B00F12345 /* ru */,
 				A1E2B5C92F4A8A1B00F12345 /* hi */,
