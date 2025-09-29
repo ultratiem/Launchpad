@@ -160,7 +160,7 @@ STRINGS = {
         "press_enter": "창을 닫으려면 Enter 키를 누르세요…",
     },
     "fr": {
-        "language_prompt": "Choisissez la langue :\n  1) English\n  2) 简体中文\n  3) 日本語\n  4) 한국어\n  5) Français\n  6) Español\n  7) Deutsch\n  8) Русский\n  9) हिन्दी\n 10) Tiếng Việt\nEntrez votre choix [1] : ",
+        "language_prompt": "Sélectionnez la langue :\n  1) English\n  2) 简体中文\n  3) 日本語\n  4) 한국어\n  5) Français\n  6) Español\n  7) Deutsch\n  8) Русский\n  9) हिन्दी\n 10) Tiếng Việt\nEntrez votre choix [1] : ",
         "language_saved": "Préférence linguistique enregistrée.",
         "fetching": "Récupération des métadonnées de la version depuis {url}",
         "latest_tag": "Dernier tag de version : {tag}",
@@ -178,7 +178,7 @@ STRINGS = {
         "remove_quarantine_warn": "Avertissement : impossible de supprimer les attributs de quarantaine",
         "download_only_path": "Mode téléchargement uniquement : application disponible dans {path}",
         "install_prepare": "Préparation de l’installation dans {path}",
-        "requires_admin": "Privilèges administrateur requis. Veuillez entrer votre mot de passe si nécessaire.",
+        "requires_admin": "Privilèges administrateur requis. Veuillez saisir votre mot de passe si nécessaire.",
         "install_complete": "Installation terminée",
         "relaunch_warn": "Avertissement : impossible de relancer LaunchNext automatiquement",
         "release_notes": "Notes de version : {url}",
