@@ -909,6 +909,7 @@ final class LocalizationManager {
                 .showLabels: "Afficher les noms des applications",
                 .useLocalizedThirdPartyTitles: "Afficher les noms des applications dans la langue du système",
                 .enableAnimations: "Animation de transition",
+                .hideDockOption: "Masquer le Dock",
                 .hoverMagnification: "Effet de zoom au survol",
                 .hoverMagnificationScale: "Facteur de zoom au survol",
                 .activePressEffect: "Effet de zoom arrière lors du clic",
