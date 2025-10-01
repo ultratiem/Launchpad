@@ -227,7 +227,7 @@ LaunchNext/
 ### Vấn đề thường gặp
 
 **Q: Ứng dụng không khởi động?**
-A: Đảm bảo macOS 12.0+ và kiểm tra quyền hệ thống.
+A: Đảm bảo macOS 26.0+ và kiểm tra quyền hệ thống.
 
 **Q: Thiếu nút nhập?**
 A: Xác minh SettingsView.swift bao gồm chức năng nhập.

@@ -170,7 +170,7 @@ xcodebuild -project LaunchNext.xcodeproj -scheme LaunchNext -configuration Relea
 ### Häufige Probleme
 
 **F: App startet nicht?**
-A: Stellen Sie macOS 12.0+ sicher und prüfen Sie Systemberechtigungen.
+A: Stellen Sie macOS 26.0+ sicher und prüfen Sie Systemberechtigungen.
 
 **F: Import-Button fehlt?**
 A: Überprüfen Sie, dass SettingsView.swift die Import-Funktionalität enthält.

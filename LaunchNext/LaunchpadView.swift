@@ -140,6 +140,7 @@ struct LaunchpadView: View {
     @State private var fpsValue: Double = 0
     @State private var frameTimeMilliseconds: Double = 0
     @State private var isWindowVisible: Bool = true
+    @State private var draggingOriginIndex: Int? = nil
 
     private var isFolderOpen: Bool { appStore.openFolder != nil }
     
@@ -152,7 +153,7 @@ struct LaunchpadView: View {
     }
 
     private var backdropOpacity: Double {
-        appStore.isFullscreenMode ? (colorScheme == .dark ? 0.60 : 0.78) : 0.0
+        appStore.isFullscreenMode ? (colorScheme == .dark ? 0.30 : 0.25) : 0.0
     }
 
     var filteredItems: [LaunchpadItem] {
@@ -757,18 +758,19 @@ struct LaunchpadView: View {
                        finalizeHandoffDrag()
                    }
                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                       if draggingItem != nil {
-                           draggingItem = nil
-                           pendingDropIndex = nil
-                           appStore.isDragCreatingFolder = false
-                           appStore.folderCreationTarget = nil
-                           pageFlipManager.isCooldown = false
-                           isHandoffDragging = false
-                           dragPointerOffset = .zero
-                           clampSelection()
-                       }
-                   }
-               }
+                      if draggingItem != nil {
+                          draggingItem = nil
+                          pendingDropIndex = nil
+                          appStore.isDragCreatingFolder = false
+                          appStore.folderCreationTarget = nil
+                          pageFlipManager.isCooldown = false
+                          isHandoffDragging = false
+                          dragPointerOffset = .zero
+                          draggingOriginIndex = nil
+                          clampSelection()
+                      }
+                  }
+              }
                isKeyboardNavigationActive = false
                clampSelection()
                
@@ -848,6 +850,7 @@ struct LaunchpadView: View {
 
         var tx = Transaction(); tx.disablesAnimations = true
         withTransaction(tx) { draggingItem = .app(app) }
+        draggingOriginIndex = nil
         isKeyboardNavigationActive = false
         appStore.isDragCreatingFolder = false
         appStore.folderCreationTarget = nil
@@ -914,13 +917,14 @@ struct LaunchpadView: View {
                         iconSize: currentIconSize)
     }
 
-private func finalizeHandoffDrag() {
+    private func finalizeHandoffDrag() {
         guard draggingItem != nil else { return }
         defer {
             if let monitor = handoffEventMonitor { NSEvent.removeMonitor(monitor); handoffEventMonitor = nil }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
                 draggingItem = nil
                 pendingDropIndex = nil
+                draggingOriginIndex = nil
                 clampSelection()
                 // 重置翻页状态
                 pageFlipManager.isCooldown = false
@@ -1550,11 +1554,11 @@ extension LaunchpadView {
 
 
             if appStore.searchText.isEmpty && !isFolderOpen {
-                let isDraggingThisTile = (draggingItem == item)
+                let isDraggingOriginalTile = (draggingItem == item && draggingOriginIndex == globalIndex)
 
                 base
-                    .opacity(isDraggingThisTile ? 0 : 1)
-                    .allowsHitTesting(!isDraggingThisTile)
+                    .opacity(isDraggingOriginalTile ? 0 : 1)
+                    .allowsHitTesting(!isDraggingOriginalTile)
                     .simultaneousGesture(
                         DragGesture(minimumDistance: 2, coordinateSpace: .named("grid"))
                             .onChanged { value in
@@ -1569,6 +1573,7 @@ extension LaunchpadView {
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
                                     draggingItem = nil
                                     pendingDropIndex = nil
+                                    draggingOriginIndex = nil
                                     clampSelection()
                                     appStore.cleanupUnusedNewPage()
                                     appStore.removeEmptyPages()
@@ -2170,12 +2175,14 @@ extension LaunchpadView {
     private func handleDragChange(_ value: DragGesture.Value, item: LaunchpadItem, in containerSize: CGSize, columnWidth: CGFloat, appHeight: CGFloat, iconSize: CGFloat) {
         // 初始化拖拽
         if draggingItem == nil {
+            let originIndex = filteredItems.firstIndex(of: item)
             var tx = Transaction(); tx.disablesAnimations = true
             withTransaction(tx) { draggingItem = item }
+            draggingOriginIndex = originIndex
             isKeyboardNavigationActive = false
             appStore.isDragCreatingFolder = false
             appStore.folderCreationTarget = nil
-            if let idx = currentItems.firstIndex(of: item) {
+            if let idx = originIndex {
                 let pageIndex = idx / config.itemsPerPage
                 let interactiveRect = itemInteractiveRect(for: idx,
                                                            geoSize: containerSize,
@@ -2288,13 +2295,15 @@ extension LaunchpadView {
                 var newItems = appStore.items
                 var pageSlice = Array(newItems[pageStart..<pageEnd])
                 let localFrom = sourceIndexInItems - pageStart
-                let localTo = max(0, min(finalIndex - pageStart, pageSlice.count - 1))
                 let moving = pageSlice.remove(at: localFrom)
-                pageSlice.insert(moving, at: localTo)
+                let desiredLocal = max(0, finalIndex - pageStart)
+                let clampedLocal = min(desiredLocal, pageSlice.count)
+                pageSlice.insert(moving, at: clampedLocal)
                 newItems.replaceSubrange(pageStart..<pageEnd, with: pageSlice)
                 withAnimation(LNAnimations.springFast) {
                     appStore.items = newItems
                 }
+                appStore.triggerGridRefresh()
                 appStore.saveAllOrder()
                 
                 // 同页内拖拽结束后也进行压缩，确保empty项目移动到页面末尾

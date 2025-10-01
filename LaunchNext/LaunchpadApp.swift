@@ -52,9 +52,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
 
         bindAppearancePreference()
         bindControllerPreference()
+        bindSystemUIVisibility()
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.applyAppearancePreference(self.appStore.appearancePreference)
+            self.updateSystemUIVisibility()
         }
 
         if appStore.isFullscreenMode { updateWindowMode(isFullscreen: true) }
@@ -186,6 +188,24 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
             .store(in: &cancellables)
     }
 
+    private func bindSystemUIVisibility() {
+        appStore.$hideDock
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.updateSystemUIVisibility()
+            }
+            .store(in: &cancellables)
+    }
+
+    func updateSystemUIVisibility() {
+        let shouldHideDock = appStore.hideDock && windowIsVisible
+        let options: NSApplication.PresentationOptions = shouldHideDock ? [.autoHideDock] : []
+        if options != NSApp.presentationOptions {
+            NSApp.presentationOptions = options
+        }
+    }
+
     private func applyAppearancePreference(_ preference: AppearancePreference) {
         let appearance = preference.nsAppearance.flatMap { NSAppearance(named: $0) }
         window?.appearance = appearance
@@ -308,11 +328,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
 
         lastShowAt = Date()
         windowIsVisible = true
+        updateSystemUIVisibility()
         SoundManager.shared.play(.launchpadOpen)
         NotificationCenter.default.post(name: .launchpadWindowShown, object: nil)
 
         animateWindow(to: 1) {
             self.windowIsVisible = true
+            self.updateSystemUIVisibility()
             // Ensure focus after animation completes
             DispatchQueue.main.async {
                 self.window?.makeKey()
@@ -329,6 +351,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
 
         let finalize: () -> Void = {
             self.windowIsVisible = false
+            self.updateSystemUIVisibility()
             window.orderOut(nil)
             window.alphaValue = 1
             window.contentView?.alphaValue = 1

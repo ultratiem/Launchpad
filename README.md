@@ -57,7 +57,7 @@ Reads directly from the system Launchpad database:
 ## Installation
 
 ### Requirements
-- macOS 26 (Tahoe) or later (MacOS15 would work but some feedback said that you can not open folder, I can't test it.)
+- macOS 26 (Tahoe) or later
 - Apple Silicon or Intel processor
 - Xcode 26 (for building from source)
 
@@ -132,7 +132,7 @@ xcodebuild -project LaunchNext.xcodeproj -scheme LaunchNext -configuration Relea
 ### Common Issues
 
 **Q: App won't start?**
-A: Ensure macOS 15.0+ and check system permissions. (Note that some feedback said  you can not open a folder on MacOS15)
+A: Ensure macOS 26.0+ and check system permissions.
 
 ## Contributing
 

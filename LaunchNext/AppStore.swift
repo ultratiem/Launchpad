@@ -397,6 +397,16 @@ final class AppStore: ObservableObject {
     }() {
         didSet { UserDefaults.standard.set(showLabels, forKey: "showLabels") }
     }
+
+    @Published var hideDock: Bool = {
+        if UserDefaults.standard.object(forKey: "hideDock") == nil { return false }
+        return UserDefaults.standard.bool(forKey: "hideDock")
+    }() {
+        didSet {
+            guard hideDock != oldValue else { return }
+            UserDefaults.standard.set(hideDock, forKey: "hideDock")
+        }
+    }
     
     @Published var scrollSensitivity: Double {
         didSet {

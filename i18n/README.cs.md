@@ -57,7 +57,7 @@ Data aplikace jsou bezpečně uložena v:
 ## Instalace
 
 ### Požadavky
-- macOS 26 (Tahoe) nebo novější (MacOS15 by měl fungovat, ale některé zpětné vazby říkají, že nemůžete otevřít složku, nemohu to testovat.)
+- macOS 26 (Tahoe) nebo novější
 - Procesor Apple Silicon nebo Intel
 - Xcode 26 (pro sestavení ze zdrojového kódu)
 
@@ -132,7 +132,7 @@ xcodebuild -project LaunchNext.xcodeproj -scheme LaunchNext -configuration Relea
 ### Běžné problémy
 
 **Q: Aplikace se nespustí?**
-A: Ujistěte se, že máte macOS 15.0+ a zkontrolujte systémová oprávnění. (Poznámka: některé zpětné vazby říkají, že nemůžete otevřít složku na MacOS15)
+A: Ujistěte se, že máte macOS 26.0+ a zkontrolujte systémová oprávnění.
 
 ## Přispívání
 

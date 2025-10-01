@@ -163,7 +163,7 @@ xcodebuild -project LaunchNext.xcodeproj -scheme LaunchNext -configuration Relea
 ### 常见问题
 
 **问：应用无法启动？**
-答：确保 macOS 12.0+ 并检查系统权限。
+答：确保 macOS 26.0+ 并检查系统权限。
 
 **问：导入按钮缺失？**
 答：验证 SettingsView.swift 包含导入功能。

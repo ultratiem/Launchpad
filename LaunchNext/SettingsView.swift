@@ -1146,6 +1146,14 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
                 }
 
                 HStack {
+                    Text(appStore.localized(.hideDockOption))
+                    Spacer()
+                    Toggle("", isOn: $appStore.hideDock)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                }
+
+                HStack {
                     Text(appStore.localized(.hoverMagnification))
                     Spacer()
                     Toggle("", isOn: $appStore.enableHoverMagnification)

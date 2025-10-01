@@ -65,6 +65,7 @@ enum LocalizationKey: String {
     case showLabels
     case useLocalizedThirdPartyTitles
     case enableAnimations
+    case hideDockOption
     case hoverMagnification
     case hoverMagnificationScale
     case activePressEffect
@@ -266,6 +267,7 @@ final class LocalizationManager {
                 .showLabels: "Show labels under icons",
                 .useLocalizedThirdPartyTitles: "Use localized app names",
                 .enableAnimations: "Enable slide animation",
+                .hideDockOption: "Hide Dock",
                 .hoverMagnification: "Hover magnification",
                 .hoverMagnificationScale: "Hover scale",
                 .activePressEffect: "Press feedback",
@@ -516,6 +518,7 @@ final class LocalizationManager {
                 .showLabels: "显示图标文字",
                 .useLocalizedThirdPartyTitles: "使用本地化应用名称",
                 .enableAnimations: "启用滑动动画",
+                .hideDockOption: "隐藏 Dock",
                 .hoverMagnification: "悬停放大效果",
                 .hoverMagnificationScale: "悬停放大倍率",
                 .activePressEffect: "按下缩放反馈",
