@@ -1249,7 +1249,16 @@ final class LocalizationManager {
                 .updateCheckFailed: "Kontrola aktualizací se nezdařila",
                 .tryAgain: "Zkusit znovu",
                 .autoCheckForUpdates: "Automaticky kontrolovat aktualizace",
-                .versionParseError: "Chyba při zpracování verze"
+                .versionParseError: "Chyba při zpracování verze",
+                .updatesRefreshButton: "Zkontrolovat znovu",
+                .openUpdaterConfig: "Otevřít konfiguraci aktualizátoru",
+                .updaterConfirmTitle: "Nainstalovat aktualizaci přes Terminál?",
+                .updaterConfirmMessage: "LaunchNext se ukončí a otevře aktualizátor v Terminálu. Aplikace se po dokončení instalace automaticky znovu spustí.",
+                .updaterTerminalHint: "Aktualizace probíhá v Terminálu. LaunchNext se ukončí a automaticky znovu spustí.",
+                .updaterLaunchFailed: "Nepodařilo se spustit aktualizátor (%@).",
+                .updaterMissingBinary: "Binární soubor aktualizátoru nebyl nalezen v balíčku aplikace.",
+                .updaterNotExecutable: "Binární soubor aktualizátoru není spustitelný.",
+                .updaterHoldPrompt: "Stiskněte Enter pro zavření tohoto okna. LaunchNext se automaticky znovu otevře."
             ],
             .german: [
                 .noAppsFound: "Keine Apps gefunden",
@@ -2048,6 +2057,7 @@ final class LocalizationManager {
             .settingsSectionTitles: "Názvy aplikací",
             .settingsSectionPerformance: "Výkon",
             .settingsSectionDevelopment: "Vývoj",
+            .settingsSectionUpdates: "Aktualizace",
             .settingsSectionAbout: "O aplikaci",
             .developmentPlaceholderTitle: "Vývojářské hřiště",
             .developmentPlaceholderSubtitle: "Vyhrazeno pro budoucí nástroje a experimentální funkce.",
