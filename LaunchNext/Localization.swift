@@ -83,6 +83,20 @@ enum LocalizationKey: String {
     case importData
     case refresh
     case showQuickRefreshButton
+    case launchAtLoginTitle
+    case launchAtLoginDescription
+    case lockLayoutTitle
+    case lockLayoutDescription
+    case scanSourcesIntroTitle
+    case scanSourcesIntroDescription
+    case scanSourcesPlaceholder
+    case scanSourcesDefaultListTitle
+    case scanSourcesCustomListTitle
+    case scanSourcesAddButton
+    case scanSourcesResetButton
+    case scanSourcesEmptyHint
+    case scanSourcesMissingBadge
+    case missingAppBadge
     case resetLayout
     case resetAlertTitle
     case resetAlertMessage
@@ -100,6 +114,7 @@ enum LocalizationKey: String {
     case settingsSectionDevelopment
     case settingsSectionAbout
     case settingsSectionGeneral
+    case settingsSectionAppSources
     case settingsSectionAppearance
     case settingsSectionHiddenApps
     case settingsSectionGameController
@@ -294,6 +309,20 @@ final class LocalizationManager {
                 .importData: "Import Data",
                 .refresh: "Refresh",
                 .showQuickRefreshButton: "Show quick refresh button",
+                .launchAtLoginTitle: "Silent launch at login",
+                .launchAtLoginDescription: "After logging into macOS, LaunchNext starts in the background without showing its window.",
+                .lockLayoutTitle: "Lock layout",
+                .lockLayoutDescription: "Prevent rearranging apps and folders until you turn this off.",
+                .scanSourcesIntroTitle: "Manage additional app libraries",
+                .scanSourcesIntroDescription: "Add external drives or custom folders so LaunchNext can gather apps beyond the default locations.",
+                .scanSourcesPlaceholder: "Coming soon: choose custom folders here and LaunchNext will scan and stay in sync.",
+                .scanSourcesDefaultListTitle: "System directories",
+                .scanSourcesCustomListTitle: "Custom directories",
+                .scanSourcesAddButton: "Add folders…",
+                .scanSourcesResetButton: "Restore defaults",
+                .scanSourcesEmptyHint: "No custom directories yet. Add one to keep extra apps in sync.",
+                .scanSourcesMissingBadge: "Offline",
+                .missingAppBadge: "Offline",
                 .resetLayout: "Reset Layout",
                 .resetAlertTitle: "Confirm to reset layout?",
                 .resetAlertMessage: "This will completely reset the layout: remove all folders, clear saved order, and rescan all applications. All customizations will be lost.",
@@ -546,6 +575,20 @@ final class LocalizationManager {
                 .importData: "导入数据",
                 .refresh: "刷新",
                 .showQuickRefreshButton: "显示快速刷新按钮",
+                .launchAtLoginTitle: "开机静默启动",
+                .launchAtLoginDescription: "登录后自动后台启动 LaunchNext，窗口保持隐藏，可随时用快捷键唤出。",
+                .lockLayoutTitle: "锁定布局",
+                .lockLayoutDescription: "启用后将禁止拖动图标或文件夹，关闭后可继续调整。",
+                .scanSourcesIntroTitle: "管理额外的应用来源",
+                .scanSourcesIntroDescription: "在这里添加外接磁盘或自定义文件夹，让其中的应用自动显示在 LaunchNext。",
+                .scanSourcesPlaceholder: "功能即将上线：可在此添加或移除自定义目录，LaunchNext 会自动扫描并保持同步。",
+                .scanSourcesDefaultListTitle: "系统目录",
+                .scanSourcesCustomListTitle: "自定义目录",
+                .scanSourcesAddButton: "添加目录…",
+                .scanSourcesResetButton: "恢复默认",
+                .scanSourcesEmptyHint: "还没有自定义目录，添加后可同步更多应用。",
+                .scanSourcesMissingBadge: "未挂载",
+                .missingAppBadge: "离线",
                 .resetLayout: "重置布局",
                 .resetAlertTitle: "确认要重置布局？",
                 .resetAlertMessage: "这将完全重置布局：删除所有文件夹、清除保存顺序并重新扫描应用。所有自定义都会丢失。",
@@ -1519,6 +1562,7 @@ final class LocalizationManager {
 
         builder[.english]?.merge([
             .settingsSectionGeneral: "General",
+                .settingsSectionAppSources: "App sources",
             .settingsSectionGameController: "Game controller",
             .settingsSectionAppearance: "Appearance",
             .settingsSectionHiddenApps: "Hidden apps",
@@ -1569,6 +1613,7 @@ final class LocalizationManager {
 
         builder[.simplifiedChinese]?.merge([
             .settingsSectionGeneral: "通用",
+            .settingsSectionAppSources: "应用来源",
             .settingsSectionGameController: "游戏手柄",
             .settingsSectionAppearance: "外观与行为",
             .settingsSectionHiddenApps: "隐藏应用",
@@ -1618,7 +1663,12 @@ final class LocalizationManager {
         ]) { _, new in new }
 
         builder[.japanese]?.merge([
+            .launchAtLoginTitle: "ログイン時にサイレント起動",
+            .launchAtLoginDescription: "macOS にログインした直後、ウィンドウを表示せずに LaunchNext をバックグラウンドで起動します。",
+            .lockLayoutTitle: "レイアウトをロック",
+            .lockLayoutDescription: "この設定がオンの間はアプリやフォルダを並べ替えできません。",
             .settingsSectionGeneral: "一般",
+            .settingsSectionAppSources: "スキャン対象",
             .settingsSectionGameController: "ゲームコントローラー",
             .settingsSectionAppearance: "外観と動作",
             .settingsSectionHiddenApps: "非表示のアプリ",
@@ -1664,11 +1714,26 @@ final class LocalizationManager {
             .accessibilityPlaceholderTitle: "アクセシビリティ設定",
             .accessibilityPlaceholderSubtitle: "アクセシビリティ項目は作業中です。しばらくお待ちください。",
             .performancePlaceholderTitle: "パフォーマンスダッシュボード",
-            .performancePlaceholderSubtitle: "ここに指標が表示されます。"
+            .performancePlaceholderSubtitle: "ここに指標が表示されます。",
+            .scanSourcesIntroTitle: "LaunchNext がアプリを探す場所を管理",
+            .scanSourcesIntroDescription: "外部ドライブや任意のフォルダを追加すれば、そのアプリが自動的に LaunchNext に表示されます。",
+            .scanSourcesPlaceholder: "近日公開: ここでカスタムフォルダを追加・削除し、LaunchNext が常に同期できるようにします。",
+            .scanSourcesDefaultListTitle: "システムフォルダ",
+            .scanSourcesCustomListTitle: "カスタムフォルダ",
+            .scanSourcesAddButton: "フォルダを追加…",
+            .scanSourcesResetButton: "デフォルトに戻す",
+            .scanSourcesEmptyHint: "まだカスタムフォルダはありません。追加してアプリを同期しましょう。",
+            .scanSourcesMissingBadge: "オフライン",
+            .missingAppBadge: "オフライン"
         ]) { _, new in new }
 
         builder[.korean]?.merge([
+            .launchAtLoginTitle: "로그인 시 조용히 실행",
+            .launchAtLoginDescription: "macOS 로그인 직후 창을 띄우지 않고 백그라운드에서 LaunchNext 를 시작합니다.",
+            .lockLayoutTitle: "레이아웃 고정",
+            .lockLayoutDescription: "이 옵션을 켜면 앱과 폴더의 위치를 변경할 수 없습니다.",
             .settingsSectionGeneral: "일반",
+            .settingsSectionAppSources: "검색 경로",
             .settingsSectionGameController: "게임 컨트롤러",
             .settingsSectionAppearance: "모양과 동작",
             .settingsSectionHiddenApps: "숨김 앱",
@@ -1714,11 +1779,26 @@ final class LocalizationManager {
             .accessibilityPlaceholderTitle: "손쉬운 사용 설정",
             .accessibilityPlaceholderSubtitle: "손쉬운 사용 옵션을 준비 중입니다. 잠시만 기다려 주세요.",
             .performancePlaceholderTitle: "성능 대시보드",
-            .performancePlaceholderSubtitle: "곧 이곳에서 지표를 확인할 수 있습니다."
+            .performancePlaceholderSubtitle: "곧 이곳에서 지표를 확인할 수 있습니다.",
+            .scanSourcesIntroTitle: "LaunchNext가 앱을 찾는 위치 관리",
+            .scanSourcesIntroDescription: "외장 드라이브나 원하는 폴더를 추가하면 해당 앱이 자동으로 LaunchNext에 나타납니다.",
+            .scanSourcesPlaceholder: "곧 업데이트: 여기에서 사용자 지정 폴더를 추가하거나 제거해 LaunchNext가 항상 동기화되도록 합니다.",
+            .scanSourcesDefaultListTitle: "시스템 경로",
+            .scanSourcesCustomListTitle: "사용자 경로",
+            .scanSourcesAddButton: "폴더 추가…",
+            .scanSourcesResetButton: "기본값으로 복원",
+            .scanSourcesEmptyHint: "사용자 경로가 아직 없습니다. 추가하면 더 많은 앱을 동기화할 수 있습니다.",
+            .scanSourcesMissingBadge: "오프라인",
+            .missingAppBadge: "오프라인"
         ]) { _, new in new }
 
         builder[.vietnamese]?.merge([
+            .launchAtLoginTitle: "Khởi chạy im lặng khi đăng nhập",
+            .launchAtLoginDescription: "Sau khi đăng nhập macOS, LaunchNext chạy nền mà không mở cửa sổ.",
+            .lockLayoutTitle: "Khóa bố cục",
+            .lockLayoutDescription: "Khi bật sẽ ngăn không cho di chuyển biểu tượng và thư mục.",
             .settingsSectionGeneral: "Chung",
+            .settingsSectionAppSources: "Đường dẫn quét",
             .settingsSectionGameController: "Tay cầm chơi game",
             .settingsSectionAppearance: "Giao diện & hành vi",
             .settingsSectionHiddenApps: "Ứng dụng ẩn",
@@ -1764,7 +1844,17 @@ final class LocalizationManager {
             .accessibilityPlaceholderTitle: "Tuỳ chọn hỗ trợ tiếp cận",
             .accessibilityPlaceholderSubtitle: "Chúng tôi vẫn đang xây dựng các tuỳ chọn hỗ trợ tiếp cận.",
             .performancePlaceholderTitle: "Bảng điều khiển hiệu năng",
-            .performancePlaceholderSubtitle: "Các chỉ số sẽ sớm xuất hiện tại đây."
+            .performancePlaceholderSubtitle: "Các chỉ số sẽ sớm xuất hiện tại đây.",
+            .scanSourcesIntroTitle: "Quản lý nơi LaunchNext tìm ứng dụng",
+            .scanSourcesIntroDescription: "Thêm ổ đĩa ngoài hoặc thư mục tuỳ chỉnh để ứng dụng trong đó tự động có mặt trong LaunchNext.",
+            .scanSourcesPlaceholder: "Sắp ra mắt: thêm hoặc xoá thư mục tuỳ chỉnh tại đây để LaunchNext luôn quét và đồng bộ hoá.",
+            .scanSourcesDefaultListTitle: "Thư mục hệ thống",
+            .scanSourcesCustomListTitle: "Thư mục tuỳ chỉnh",
+            .scanSourcesAddButton: "Thêm thư mục…",
+            .scanSourcesResetButton: "Khôi phục mặc định",
+            .scanSourcesEmptyHint: "Chưa có thư mục tuỳ chỉnh. Thêm để đồng bộ thêm ứng dụng.",
+            .scanSourcesMissingBadge: "Ngoại tuyến",
+            .missingAppBadge: "Ngoại tuyến"
         ]) { _, new in new }
 
         if builder[.italian] == nil {
@@ -1772,7 +1862,12 @@ final class LocalizationManager {
         }
 
         builder[.french]?.merge([
+            .launchAtLoginTitle: "Lancement silencieux à l’ouverture de session",
+            .launchAtLoginDescription: "Après la connexion à macOS, LaunchNext se lance en arrière-plan sans afficher de fenêtre.",
+            .lockLayoutTitle: "Verrouiller la disposition",
+            .lockLayoutDescription: "Empêche de réorganiser les apps et dossiers tant que l’option est activée.",
             .settingsSectionGeneral: "Général",
+            .settingsSectionAppSources: "Sources d’analyse",
             .settingsSectionGameController: "Manette",
             .settingsSectionAppearance: "Apparence",
             .settingsSectionHiddenApps: "Applications masquées",
@@ -1818,11 +1913,26 @@ final class LocalizationManager {
             .accessibilityPlaceholderTitle: "Paramètres d’accessibilité",
             .accessibilityPlaceholderSubtitle: "Les paramètres d’accessibilité apparaîtront ici prochainement.",
             .performancePlaceholderTitle: "Tableau de bord des performances",
-            .performancePlaceholderSubtitle: "Les indicateurs apparaîtront ici prochainement."
+            .performancePlaceholderSubtitle: "Les indicateurs apparaîtront ici prochainement.",
+            .scanSourcesIntroTitle: "Gérer les emplacements analysés par LaunchNext",
+            .scanSourcesIntroDescription: "Ajoutez des disques externes ou des dossiers personnalisés pour que leurs applications apparaissent automatiquement dans LaunchNext.",
+            .scanSourcesPlaceholder: "Bientôt disponible : ajoutez ou supprimez ici des dossiers personnalisés et LaunchNext restera synchronisé.",
+            .scanSourcesDefaultListTitle: "Répertoires système",
+            .scanSourcesCustomListTitle: "Répertoires personnalisés",
+            .scanSourcesAddButton: "Ajouter des dossiers…",
+            .scanSourcesResetButton: "Restaurer par défaut",
+            .scanSourcesEmptyHint: "Aucun dossier personnalisé pour le moment. Ajoutez-en pour synchroniser davantage d’apps.",
+            .scanSourcesMissingBadge: "Hors ligne",
+            .missingAppBadge: "Hors ligne"
         ]) { _, new in new }
 
         builder[.italian]?.merge([
+            .launchAtLoginTitle: "Avvio silenzioso all’accesso",
+            .launchAtLoginDescription: "Dopo l’accesso a macOS, LaunchNext parte in background senza mostrare la finestra.",
+            .lockLayoutTitle: "Blocca layout",
+            .lockLayoutDescription: "Impedisce di spostare app e cartelle finché l’opzione è attiva.",
             .settingsSectionGeneral: "Generali",
+            .settingsSectionAppSources: "Origini di scansione",
             .settingsSectionGameController: "Controller di gioco",
             .settingsSectionAppearance: "Aspetto e comportamento",
             .settingsSectionHiddenApps: "App nascoste",
@@ -1870,6 +1980,16 @@ final class LocalizationManager {
             .accessibilityPlaceholderSubtitle: "Le opzioni di accessibilità arriveranno a breve.",
             .performancePlaceholderTitle: "Pannello prestazioni",
             .performancePlaceholderSubtitle: "Le metriche appariranno qui a breve.",
+            .scanSourcesIntroTitle: "Gestisci dove LaunchNext cerca le app",
+            .scanSourcesIntroDescription: "Aggiungi dischi esterni o cartelle personalizzate per sincronizzare automaticamente le relative applicazioni in LaunchNext.",
+            .scanSourcesPlaceholder: "In arrivo: qui potrai aggiungere o rimuovere cartelle personalizzate e LaunchNext si manterrà aggiornato.",
+            .scanSourcesDefaultListTitle: "Percorsi di sistema",
+            .scanSourcesCustomListTitle: "Percorsi personalizzati",
+            .scanSourcesAddButton: "Aggiungi cartelle…",
+            .scanSourcesResetButton: "Ripristina predefiniti",
+            .scanSourcesEmptyHint: "Nessun percorso personalizzato. Aggiungine uno per sincronizzare altre app.",
+            .scanSourcesMissingBadge: "Offline",
+            .missingAppBadge: "Offline",
             .appTitle: "LaunchNext",
             .modifiedFrom: "Derivato da LaunchNow versione 1.3.1",
             .backgroundHint: "Per eseguirlo in background aggiungi LaunchNext al Dock o usa una scorciatoia da tastiera per aprire la finestra dell’app.",
@@ -1999,7 +2119,12 @@ final class LocalizationManager {
         ]) { _, new in new }
 
         builder[.spanish]?.merge([
+            .launchAtLoginTitle: "Inicio silencioso al iniciar sesión",
+            .launchAtLoginDescription: "Tras iniciar sesión en macOS, LaunchNext se abre en segundo plano sin mostrar la ventana.",
+            .lockLayoutTitle: "Bloquear la disposición",
+            .lockLayoutDescription: "Impide reorganizar apps y carpetas mientras esté activado.",
             .settingsSectionGeneral: "General",
+            .settingsSectionAppSources: "Rutas de escaneo",
             .settingsSectionGameController: "Mando",
             .settingsSectionAppearance: "Apariencia y comportamiento",
             .settingsSectionHiddenApps: "Apps ocultas",
@@ -2045,11 +2170,26 @@ final class LocalizationManager {
             .accessibilityPlaceholderTitle: "Opciones de accesibilidad",
             .accessibilityPlaceholderSubtitle: "Las configuraciones de accesibilidad aún no están listas.",
             .performancePlaceholderTitle: "Panel de rendimiento",
-            .performancePlaceholderSubtitle: "Muy pronto podrás ver métricas aquí."
+            .performancePlaceholderSubtitle: "Muy pronto podrás ver métricas aquí.",
+            .scanSourcesIntroTitle: "Gestiona dónde busca aplicaciones LaunchNext",
+            .scanSourcesIntroDescription: "Añade unidades externas o carpetas personalizadas para que sus aplicaciones aparezcan automáticamente en LaunchNext.",
+            .scanSourcesPlaceholder: "Muy pronto: podrás añadir o quitar carpetas personalizadas y LaunchNext las mantendrá sincronizadas.",
+            .scanSourcesDefaultListTitle: "Directorios del sistema",
+            .scanSourcesCustomListTitle: "Directorios personalizados",
+            .scanSourcesAddButton: "Añadir carpetas…",
+            .scanSourcesResetButton: "Restablecer predeterminados",
+            .scanSourcesEmptyHint: "Todavía no hay directorios personalizados. Añade uno para sincronizar más apps.",
+            .scanSourcesMissingBadge: "Sin conexión",
+            .missingAppBadge: "Sin conexión"
         ]) { _, new in new }
 
         builder[.czech]?.merge([
+            .launchAtLoginTitle: "Tichý start po přihlášení",
+            .launchAtLoginDescription: "Po přihlášení do macOS se LaunchNext spustí na pozadí bez zobrazení okna.",
+            .lockLayoutTitle: "Uzamknout rozložení",
+            .lockLayoutDescription: "Při zapnutí zabrání přesouvání aplikací a složek.",
             .settingsSectionGeneral: "Obecné",
+            .settingsSectionAppSources: "Sledované cesty",
             .settingsSectionGameController: "Herní ovladač",
             .settingsSectionAppearance: "Vzhled",
             .settingsSectionHiddenApps: "Skryté aplikace",
@@ -2095,11 +2235,26 @@ final class LocalizationManager {
             .accessibilityPlaceholderTitle: "Zpřístupnění",
             .accessibilityPlaceholderSubtitle: "Nastavení zpřístupnění se připravuje; zatím zde nic není.",
             .performancePlaceholderTitle: "Výkonový přehled",
-            .performancePlaceholderSubtitle: "Metriky budou brzy k dispozici."
+            .performancePlaceholderSubtitle: "Metriky budou brzy k dispozici.",
+            .scanSourcesIntroTitle: "Spravujte místa, kde LaunchNext hledá aplikace",
+            .scanSourcesIntroDescription: "Přidejte externí disky či vlastní složky a jejich aplikace se v LaunchNext objeví automaticky.",
+            .scanSourcesPlaceholder: "Již brzy: zde půjde přidávat nebo odebírat vlastní složky a LaunchNext je udrží synchronizované.",
+            .scanSourcesDefaultListTitle: "Systémové cesty",
+            .scanSourcesCustomListTitle: "Vlastní cesty",
+            .scanSourcesAddButton: "Přidat složky…",
+            .scanSourcesResetButton: "Obnovit výchozí",
+            .scanSourcesEmptyHint: "Zatím žádné vlastní cesty. Přidejte je pro synchronizaci dalších aplikací.",
+            .scanSourcesMissingBadge: "Offline",
+            .missingAppBadge: "Offline"
         ]) { _, new in new }
         
         builder[.german]?.merge([
+            .launchAtLoginTitle: "Stiller Start nach Login",
+            .launchAtLoginDescription: "Nach dem Anmelden bei macOS startet LaunchNext im Hintergrund ohne Fenster.",
+            .lockLayoutTitle: "Layout sperren",
+            .lockLayoutDescription: "Verhindert das Verschieben von Apps und Ordnern, solange aktiviert.",
             .settingsSectionGeneral: "Allgemein",
+            .settingsSectionAppSources: "Scan-Quellen",
             .settingsSectionGameController: "Gamecontroller",
             .settingsSectionAppearance: "Darstellung & Verhalten",
             .settingsSectionHiddenApps: "Ausgeblendete Apps",
@@ -2145,11 +2300,26 @@ final class LocalizationManager {
             .accessibilityPlaceholderTitle: "Barrierefreiheit",
             .accessibilityPlaceholderSubtitle: "Die Einstellungen zur Barrierefreiheit folgen noch.",
             .performancePlaceholderTitle: "Performance-Dashboard",
-            .performancePlaceholderSubtitle: "Kennzahlen folgen in Kürze."
+            .performancePlaceholderSubtitle: "Kennzahlen folgen in Kürze.",
+            .scanSourcesIntroTitle: "Verwalte, wo LaunchNext nach Apps sucht",
+            .scanSourcesIntroDescription: "Füge externe Laufwerke oder eigene Ordner hinzu, damit deren Apps automatisch in LaunchNext erscheinen.",
+            .scanSourcesPlaceholder: "Bald verfügbar: Hier kannst du eigene Ordner hinzufügen oder entfernen und LaunchNext bleibt synchron.",
+            .scanSourcesDefaultListTitle: "Systempfade",
+            .scanSourcesCustomListTitle: "Eigene Pfade",
+            .scanSourcesAddButton: "Ordner hinzufügen…",
+            .scanSourcesResetButton: "Standard wiederherstellen",
+            .scanSourcesEmptyHint: "Noch keine eigenen Pfade. Füge welche hinzu, um weitere Apps zu synchronisieren.",
+            .scanSourcesMissingBadge: "Offline",
+            .missingAppBadge: "Offline"
         ]) { _, new in new }
 
         builder[.russian]?.merge([
+            .launchAtLoginTitle: "Тихий запуск при входе",
+            .launchAtLoginDescription: "После входа в macOS LaunchNext запускается в фоновом режиме без окна.",
+            .lockLayoutTitle: "Зафиксировать раскладку",
+            .lockLayoutDescription: "Не позволяет перемещать приложения и папки, пока включено.",
             .settingsSectionGeneral: "Общие",
+            .settingsSectionAppSources: "Пути сканирования",
             .settingsSectionGameController: "Геймпад",
             .settingsSectionAppearance: "Внешний вид и поведение",
             .settingsSectionHiddenApps: "Скрытые приложения",
@@ -2195,7 +2365,17 @@ final class LocalizationManager {
             .accessibilityPlaceholderTitle: "Параметры доступности",
             .accessibilityPlaceholderSubtitle: "Настройки доступности ещё в разработке.",
             .performancePlaceholderTitle: "Панель производительности",
-            .performancePlaceholderSubtitle: "Скоро здесь появятся показатели эффективности."
+            .performancePlaceholderSubtitle: "Скоро здесь появятся показатели эффективности.",
+            .scanSourcesIntroTitle: "Управляйте местами, где LaunchNext ищет приложения",
+            .scanSourcesIntroDescription: "Добавьте внешние диски или произвольные папки, и их приложения будут автоматически отображаться в LaunchNext.",
+            .scanSourcesPlaceholder: "Скоро: здесь можно будет добавлять и удалять собственные каталоги, а LaunchNext будет держать их в актуальном состоянии.",
+            .scanSourcesDefaultListTitle: "Системные каталоги",
+            .scanSourcesCustomListTitle: "Пользовательские каталоги",
+            .scanSourcesAddButton: "Добавить папки…",
+            .scanSourcesResetButton: "Восстановить по умолчанию",
+            .scanSourcesEmptyHint: "Пользовательских каталогов пока нет. Добавьте их, чтобы синхронизировать больше приложений.",
+            .scanSourcesMissingBadge: "Офлайн",
+            .missingAppBadge: "Офлайн"
         ]) { _, new in new }
 
         var hindiDictionary = builder[.english] ?? [:]
@@ -2215,6 +2395,10 @@ final class LocalizationManager {
         hindiDictionary[.languageNameVietnamese] = "वियतनामी"
 
         hindiDictionary.merge([
+            .launchAtLoginTitle: "लॉगिन पर साइलेंट लॉन्च",
+            .launchAtLoginDescription: "macOS में साइन इन करने के बाद LaunchNext विंडो दिखाए बिना बैकग्राउंड में चलता है।",
+            .lockLayoutTitle: "लेआउट लॉक करें",
+            .lockLayoutDescription: "इस विकल्प के चालू रहने पर ऐप और फ़ोल्डर को पुनः व्यवस्थित नहीं किया जा सकता।",
             .noAppsFound: "कोई ऐप नहीं मिला",
             .searchPlaceholder: "खोजें",
             .renameSearchPlaceholder: "ऐप खोजें",
@@ -2322,6 +2506,7 @@ final class LocalizationManager {
             .updatesRefreshButton: "फिर से जाँचें",
             .openUpdaterConfig: "अपडेट कॉन्फ़िग फ़ाइल खोलें",
             .settingsSectionGeneral: "सामान्य",
+            .settingsSectionAppSources: "स्कैन पथ",
             .settingsSectionAppearance: "रूप व व्यवहार",
             .settingsSectionHiddenApps: "छिपे हुए ऐप्स",
             .settingsSectionSound: "ध्वनि",
@@ -2354,7 +2539,17 @@ final class LocalizationManager {
             .voiceAnnouncementAppFormat: "%@",
             .voiceAnnouncementFolderFormat: "फ़ोल्डर: %@",
             .performancePlaceholderTitle: "प्रदर्शन डैशबोर्ड",
-            .performancePlaceholderSubtitle: "जल्द ही मेट्रिक्स यहाँ दिखेंगे।"
+            .performancePlaceholderSubtitle: "जल्द ही मेट्रिक्स यहाँ दिखेंगे।",
+            .scanSourcesIntroTitle: "LaunchNext में ऐप खोजने के स्थान प्रबंधित करें",
+            .scanSourcesIntroDescription: "यहाँ बाहरी ड्राइव या कस्टम फ़ोल्डर जोड़ें ताकि वहाँ की ऐप्स अपने आप LaunchNext में दिखें।",
+            .scanSourcesPlaceholder: "जल्द ही: यहाँ कस्टम फ़ोल्डर जोड़ने या हटाने का विकल्प मिलेगा और LaunchNext उन्हें अद्यतन रखेगा।",
+            .scanSourcesDefaultListTitle: "सिस्टम निर्देशिका",
+            .scanSourcesCustomListTitle: "कस्टम निर्देशिका",
+            .scanSourcesAddButton: "फ़ोल्डर जोड़ें…",
+            .scanSourcesResetButton: "डिफ़ॉल्ट पुनर्स्थापित करें",
+            .scanSourcesEmptyHint: "अभी कोई कस्टम निर्देशिका नहीं है। और ऐप सिंक करने के लिए एक जोड़ें।",
+            .scanSourcesMissingBadge: "ऑफ़लाइन",
+            .missingAppBadge: "ऑफ़लाइन"
         ]) { _, new in new }
 
         builder[.hindi] = hindiDictionary

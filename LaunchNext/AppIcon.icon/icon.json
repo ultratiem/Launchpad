@@ -13,17 +13,36 @@
       "blur-material" : null,
       "layers" : [
         {
-          "glass" : false,
-          "hidden" : false,
-          "image-name" : "launchpad_new.png",
-          "name" : "launchpad_new",
-          "position" : {
-            "scale" : 1.27,
-            "translation-in-points" : [
-              -0.125,
-              9.546875
-            ]
-          }
+          "image-name" : "9.chiclet1_unspecified_unspecified_automatic.svg",
+          "name" : "9.chiclet1_unspecified_unspecified_automatic"
+        },
+        {
+          "image-name" : "8.chiclet2_unspecified_unspecified_automatic.svg",
+          "name" : "8.chiclet2_unspecified_unspecified_automatic"
+        },
+        {
+          "image-name" : "7.chiclet3_unspecified_unspecified_automatic.svg",
+          "name" : "7.chiclet3_unspecified_unspecified_automatic"
+        },
+        {
+          "image-name" : "6.chiclet4_unspecified_unspecified_automatic.svg",
+          "name" : "6.chiclet4_unspecified_unspecified_automatic"
+        },
+        {
+          "image-name" : "5.chiclet5_unspecified_unspecified_automatic.svg",
+          "name" : "5.chiclet5_unspecified_unspecified_automatic"
+        },
+        {
+          "image-name" : "4.chiclet6_unspecified_unspecified_automatic.svg",
+          "name" : "4.chiclet6_unspecified_unspecified_automatic"
+        },
+        {
+          "image-name" : "3.magnifier_unspecified_unspecified_automatic.svg",
+          "name" : "3.magnifier_unspecified_unspecified_automatic"
+        },
+        {
+          "image-name" : "2.searchbar_unspecified_unspecified_automatic.svg",
+          "name" : "2.searchbar_unspecified_unspecified_automatic"
         }
       ],
       "lighting" : "individual",

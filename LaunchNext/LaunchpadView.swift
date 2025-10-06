@@ -140,7 +140,6 @@ struct LaunchpadView: View {
     @State private var fpsValue: Double = 0
     @State private var frameTimeMilliseconds: Double = 0
     @State private var isWindowVisible: Bool = true
-    @State private var draggingOriginIndex: Int? = nil
 
     private var isFolderOpen: Bool { appStore.openFolder != nil }
     
@@ -170,6 +169,13 @@ struct LaunchpadView: View {
                 if app.name.localizedCaseInsensitiveContains(query) {
                     result.append(.app(app))
                     searchedApps.insert(app.url.path)
+                }
+            case .missingApp(let placeholder):
+                if placeholder.displayName.localizedCaseInsensitiveContains(query) {
+                    if !searchedApps.contains(placeholder.bundlePath) {
+                        result.append(.missingApp(placeholder))
+                        searchedApps.insert(placeholder.bundlePath)
+                    }
                 }
             case .folder(let folder):
                 // 检查文件夹名称
@@ -241,9 +247,20 @@ struct LaunchpadView: View {
                 p += 1
             }
         }
-        return pageSlices.flatMap { $0 }
+
+        var transformed = pageSlices
+        for pageIndex in transformed.indices {
+            for itemIndex in transformed[pageIndex].indices {
+                if transformed[pageIndex][itemIndex] == dragging {
+                    let placeholderToken = "dragging-placeholder-\(dragging.id)-\(pageIndex)-\(itemIndex)"
+                    transformed[pageIndex][itemIndex] = .empty(placeholderToken)
+                }
+            }
+        }
+
+        return transformed.flatMap { $0 }
     }
-    
+
     private func makePages(from items: [LaunchpadItem]) -> [[LaunchpadItem]] {
         guard !items.isEmpty else { return [] }
         return stride(from: 0, to: items.count, by: config.itemsPerPage).map { start in
@@ -450,7 +467,10 @@ struct LaunchpadView: View {
 
                             // 将预览提升到外层坐标空间，避免受到 offset 影响
                             if let draggingItem {
-                                DragPreviewItem(item: draggingItem, iconSize: iconSize, labelWidth: columnWidth * 0.9, scale: dragPreviewScale)
+                                DragPreviewItem(item: draggingItem,
+                                               iconSize: iconSize,
+                                               labelWidth: columnWidth * 0.9,
+                                               scale: dragPreviewScale)
                                     .position(x: dragPreviewPosition.x, y: dragPreviewPosition.y)
                                     .zIndex(100)
                                     .allowsHitTesting(false)
@@ -464,7 +484,7 @@ struct LaunchpadView: View {
                                                                columnWidth: columnWidth,
                                                                appHeight: appHeight,
                                                                iconSize: iconSize),
-                                             including: .gesture)
+                                             including: draggingItem == nil ? .gesture : .subviews)
                         .onTapGesture {
                             // 失焦输入
                             NSApp.keyWindow?.makeFirstResponder(nil)
@@ -765,8 +785,6 @@ struct LaunchpadView: View {
                           appStore.folderCreationTarget = nil
                           pageFlipManager.isCooldown = false
                           isHandoffDragging = false
-                          dragPointerOffset = .zero
-                          draggingOriginIndex = nil
                           clampSelection()
                       }
                   }
@@ -813,6 +831,33 @@ struct LaunchpadView: View {
                 VoiceManager.shared.stop()
             }
         }
+        .onChange(of: appStore.isLayoutLocked) { _, locked in
+            guard locked else { return }
+            if let monitor = handoffEventMonitor {
+                NSEvent.removeMonitor(monitor)
+                handoffEventMonitor = nil
+            }
+            draggingItem = nil
+            pendingDropIndex = nil
+            dragPreviewPosition = .zero
+            dragPointerOffset = .zero
+            dragPreviewScale = 1.2
+            appStore.isDragCreatingFolder = false
+            appStore.folderCreationTarget = nil
+            appStore.handoffDraggingApp = nil
+            appStore.handoffDragScreenLocation = nil
+            folderHoverCandidateIndex = nil
+            folderHoverBeganAt = nil
+            pageFlipManager.isCooldown = false
+            isHandoffDragging = false
+            blankDragStartPoint = nil
+            blankDragShouldIgnore = false
+            blankDragConsumed = false
+            appStore.cleanupUnusedNewPage()
+            appStore.removeEmptyPages()
+            appStore.saveAllOrder()
+            clampSelection()
+        }
     }
     
     private func launchApp(_ app: AppInfo) {
@@ -831,6 +876,8 @@ struct LaunchpadView: View {
             withAnimation(LNAnimations.springFast) {
                 appStore.openFolder = folder
             }
+        case .missingApp:
+            NSSound.beep()
         case .empty:
             break
         }
@@ -841,6 +888,11 @@ struct LaunchpadView: View {
     // MARK: - Handoff drag from folder
     private func startHandoffDragIfNeeded(geo: GeometryProxy, columnWidth: CGFloat, appHeight: CGFloat, iconSize: CGFloat) {
         guard draggingItem == nil, let app = appStore.handoffDraggingApp else { return }
+        if appStore.isLayoutLocked {
+            appStore.handoffDraggingApp = nil
+            appStore.handoffDragScreenLocation = nil
+            return
+        }
         // 更新几何上下文
         captureGridGeometry(geo, columnWidth: columnWidth, appHeight: appHeight, iconSize: iconSize)
 
@@ -850,11 +902,9 @@ struct LaunchpadView: View {
 
         var tx = Transaction(); tx.disablesAnimations = true
         withTransaction(tx) { draggingItem = .app(app) }
-        draggingOriginIndex = nil
         isKeyboardNavigationActive = false
         appStore.isDragCreatingFolder = false
         appStore.folderCreationTarget = nil
-        dragPointerOffset = .zero
         dragPreviewScale = 1.2
         dragPreviewPosition = localPoint
         // 使接力拖拽与普通拖拽一致：预创建新页面以支持边缘翻页
@@ -909,6 +959,7 @@ struct LaunchpadView: View {
     }
 
     private func handleHandoffDragMove(to localPoint: CGPoint) {
+        guard !appStore.isLayoutLocked else { return }
         // 复用与普通拖拽完全一致的更新逻辑
         applyDragUpdate(at: localPoint,
                         containerSize: currentContainerSize,
@@ -924,7 +975,7 @@ struct LaunchpadView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
                 draggingItem = nil
                 pendingDropIndex = nil
-                draggingOriginIndex = nil
+                dragPointerOffset = .zero
                 clampSelection()
                 // 重置翻页状态
                 pageFlipManager.isCooldown = false
@@ -940,10 +991,13 @@ struct LaunchpadView: View {
                 appStore.triggerGridRefresh()
             }
         }
+        if appStore.isLayoutLocked {
+            appStore.triggerGridRefresh()
+            return
+        }
         // 在接力拖拽模式下，落点时再计算目标索引，过程中不展示吸附
         if isHandoffDragging && pendingDropIndex == nil {
-            let pointerPoint = CGPoint(x: dragPreviewPosition.x + dragPointerOffset.x,
-                                       y: dragPreviewPosition.y + dragPointerOffset.y)
+            let pointerPoint = dragPreviewPosition
             if let idx = indexAt(point: pointerPoint,
                                   in: currentContainerSize,
                                   pageIndex: appStore.currentPage,
@@ -1527,6 +1581,8 @@ extension LaunchpadView {
                     return appStore.folderCreationTarget?.id == targetApp.id
                 case .folder:
                     return folderHoverCandidateIndex == idx
+                case .missingApp:
+                    return false
                 case .empty:
                     return false
                 }
@@ -1553,12 +1609,12 @@ extension LaunchpadView {
             .id(item.id)
 
 
-            if appStore.searchText.isEmpty && !isFolderOpen {
-                let isDraggingOriginalTile = (draggingItem == item && draggingOriginIndex == globalIndex)
+            if appStore.searchText.isEmpty && !isFolderOpen && !appStore.isLayoutLocked {
+                let isDraggingThisTile = (draggingItem == item)
 
                 base
-                    .opacity(isDraggingOriginalTile ? 0 : 1)
-                    .allowsHitTesting(!isDraggingOriginalTile)
+                    .opacity(isDraggingThisTile ? 0 : 1)
+                    .allowsHitTesting(!isDraggingThisTile)
                     .simultaneousGesture(
                         DragGesture(minimumDistance: 2, coordinateSpace: .named("grid"))
                             .onChanged { value in
@@ -1573,7 +1629,6 @@ extension LaunchpadView {
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
                                     draggingItem = nil
                                     pendingDropIndex = nil
-                                    draggingOriginIndex = nil
                                     clampSelection()
                                     appStore.cleanupUnusedNewPage()
                                     appStore.removeEmptyPages()
@@ -1711,6 +1766,35 @@ extension LaunchpadView {
         let insetY = max(0, (appHeight - contentHeight) / 2)
 
         return cellRect.insetBy(dx: insetX, dy: insetY)
+    }
+
+    private func iconCenter(for globalIndex: Int,
+                             geoSize: CGSize,
+                             columnWidth: CGFloat,
+                             appHeight: CGFloat,
+                             iconSize: CGFloat) -> CGPoint {
+        let pageIndex = max(0, globalIndex / config.itemsPerPage)
+        let localIndex = globalIndex % config.itemsPerPage
+        let cellOrigin = GeometryUtils.cellOrigin(for: localIndex,
+                                                  containerSize: geoSize,
+                                                  pageIndex: pageIndex,
+                                                  columnWidth: columnWidth,
+                                                  appHeight: appHeight,
+                                                  columns: config.columns,
+                                                  columnSpacing: config.columnSpacing,
+                                                  rowSpacing: config.rowSpacing,
+                                                  pageSpacing: config.pageSpacing,
+                                                  currentPage: appStore.currentPage)
+
+        let hasLabel = appStore.showLabels
+        let verticalPadding: CGFloat = 8
+        let iconLabelSpacing: CGFloat = hasLabel ? 8 : 0
+        let contentHeight = iconSize + iconLabelSpacing + (hasLabel ? max(0, appHeight - iconSize - verticalPadding * 2 - iconLabelSpacing) : 0) + verticalPadding * 2
+        let insetY = max(0, (appHeight - contentHeight) / 2)
+
+        let iconCenterX = cellOrigin.x + columnWidth / 2
+        let iconCenterY = cellOrigin.y + insetY + verticalPadding + iconSize / 2
+        return CGPoint(x: iconCenterX, y: iconCenterY)
     }
 
     private func clampPointWithinBounds(_ point: CGPoint, containerSize: CGSize) -> CGPoint {
@@ -2076,16 +2160,39 @@ struct DragPreviewItem: View {
     let iconSize: CGFloat
     let labelWidth: CGFloat
     var scale: CGFloat = 1.2
-    
+
     // 性能优化：使用计算属性避免状态修改
     private var displayIcon: NSImage {
         switch item {
         case .app(let app):
-            return app.icon
+            let pathExists = FileManager.default.fileExists(atPath: app.url.path)
+            let icon = app.icon
+            if pathExists && icon.size.width > 0 && icon.size.height > 0 {
+                return icon
+            }
+            return MissingAppPlaceholder.defaultIcon
+        case .missingApp(let placeholder):
+            let pathExists = FileManager.default.fileExists(atPath: placeholder.bundlePath)
+            let icon = placeholder.icon
+            if pathExists && icon.size.width > 0 && icon.size.height > 0 {
+                return icon
+            }
+            return MissingAppPlaceholder.defaultIcon
         case .folder(let folder):
             return folder.icon(of: iconSize)
         case .empty:
             return item.icon
+        }
+    }
+
+    private var isMissing: Bool {
+        switch item {
+        case .missingApp:
+            return true
+        case .app(let app):
+            return !FileManager.default.fileExists(atPath: app.url.path)
+        default:
+            return false
         }
     }
 
@@ -2098,9 +2205,56 @@ struct DragPreviewItem: View {
                     .interpolation(.high)
                     .antialiased(true)
                     .frame(width: iconSize, height: iconSize)
+                    .opacity(isMissing ? 0.65 : 1.0)
+                    .overlay(alignment: .topTrailing) {
+                        if isMissing {
+                            Circle()
+                                .fill(Color.orange.opacity(0.85))
+                                .frame(width: iconSize * 0.22, height: iconSize * 0.22)
+                                .overlay(
+                                    Image(systemName: "exclamationmark")
+                                        .font(.system(size: iconSize * 0.14, weight: .bold))
+                                        .foregroundStyle(Color.white)
+                                )
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                                .padding(iconSize * 0.1)
+                        }
+                    }
                 Text(app.name)
                     .font(.default)
-                    .foregroundColor(.primary)
+                    .foregroundColor(isMissing ? .secondary : .primary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(width: labelWidth)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+            }
+            .scaleEffect(scale)
+            .animation(LNAnimations.springFast, value: scale)
+
+        case .missingApp(let placeholder):
+            VStack(spacing: 6) {
+                Image(nsImage: displayIcon)
+                    .resizable()
+                    .interpolation(.high)
+                    .antialiased(true)
+                    .frame(width: iconSize, height: iconSize)
+                    .opacity(0.65)
+                    .overlay(
+                        Circle()
+                            .fill(Color.orange.opacity(0.85))
+                            .frame(width: iconSize * 0.22, height: iconSize * 0.22)
+                            .overlay(
+                                Image(systemName: "exclamationmark")
+                                    .font(.system(size: iconSize * 0.14, weight: .bold))
+                                    .foregroundStyle(Color.white)
+                            )
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                            .padding(iconSize * 0.1)
+                    )
+                Text(placeholder.displayName)
+                    .font(.default)
+                    .foregroundColor(.secondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(width: labelWidth)
@@ -2173,30 +2327,28 @@ extension LaunchpadView {
     
     // MARK: - 简化的拖拽处理函数
     private func handleDragChange(_ value: DragGesture.Value, item: LaunchpadItem, in containerSize: CGSize, columnWidth: CGFloat, appHeight: CGFloat, iconSize: CGFloat) {
+        guard !appStore.isLayoutLocked else { return }
         // 初始化拖拽
         if draggingItem == nil {
-            let originIndex = filteredItems.firstIndex(of: item)
             var tx = Transaction(); tx.disablesAnimations = true
             withTransaction(tx) { draggingItem = item }
-            draggingOriginIndex = originIndex
             isKeyboardNavigationActive = false
             appStore.isDragCreatingFolder = false
             appStore.folderCreationTarget = nil
-            if let idx = originIndex {
-                let pageIndex = idx / config.itemsPerPage
-                let interactiveRect = itemInteractiveRect(for: idx,
-                                                           geoSize: containerSize,
-                                                           columnWidth: columnWidth,
-                                                           appHeight: appHeight,
-                                                           iconSize: iconSize)
-                let center = CGPoint(x: interactiveRect.midX, y: interactiveRect.midY)
+
+            if let idx = filteredItems.firstIndex(of: item) {
+                let center = iconCenter(for: idx,
+                                         geoSize: containerSize,
+                                         columnWidth: columnWidth,
+                                         appHeight: appHeight,
+                                         iconSize: iconSize)
                 dragPointerOffset = CGPoint(x: value.location.x - center.x,
                                              y: value.location.y - center.y)
+                dragPreviewPosition = center
             } else {
                 dragPointerOffset = .zero
+                dragPreviewPosition = value.location
             }
-            dragPreviewPosition = CGPoint(x: value.location.x - dragPointerOffset.x,
-                                           y: value.location.y - dragPointerOffset.y)
         }
         applyDragUpdate(at: value.location,
                         containerSize: containerSize,
@@ -2209,7 +2361,14 @@ extension LaunchpadView {
     private func finalizeDragOperation(containerSize: CGSize, columnWidth: CGFloat, appHeight: CGFloat, iconSize: CGFloat) {
         guard let dragging = draggingItem else { return }
         defer { dragPointerOffset = .zero }
-        
+
+        if appStore.isLayoutLocked {
+            appStore.isDragCreatingFolder = false
+            appStore.folderCreationTarget = nil
+            pendingDropIndex = nil
+            return
+        }
+
         // 处理文件夹创建逻辑
         if appStore.isDragCreatingFolder, case .app(let app) = dragging {
             if let targetApp = appStore.folderCreationTarget {
@@ -2241,8 +2400,7 @@ extension LaunchpadView {
                     }
                 }
             } else {
-                let pointerPoint = CGPoint(x: dragPreviewPosition.x + dragPointerOffset.x,
-                                           y: dragPreviewPosition.y + dragPointerOffset.y)
+                let pointerPoint = dragPreviewPosition
                 if let hoveringIndex = indexAt(point: pointerPoint,
                                                in: containerSize,
                                                pageIndex: appStore.currentPage,
@@ -2333,16 +2491,20 @@ extension LaunchpadView {
                                  columnWidth: CGFloat,
                                  appHeight: CGFloat,
                                  iconSize: CGFloat) {
+        guard !appStore.isLayoutLocked else { return }
         let rawIconCenter = CGPoint(x: point.x - dragPointerOffset.x,
                                      y: point.y - dragPointerOffset.y)
-        let iconCenter = appStore.enableDropPrediction
-            ? clampPointWithinBounds(rawIconCenter, containerSize: containerSize)
-            : rawIconCenter
-        let hoverPoint = appStore.enableDropPrediction ? iconCenter : point
+        var iconCenter = rawIconCenter
+        var hoverPoint = rawIconCenter
+        if appStore.enableDropPrediction {
+            let clamped = clampPointWithinBounds(rawIconCenter, containerSize: containerSize)
+            iconCenter = clamped
+            hoverPoint = clamped
+        }
         // 性能优化：减少频繁的位置更新
         let distance = sqrt(pow(dragPreviewPosition.x - iconCenter.x, 2) + pow(dragPreviewPosition.y - iconCenter.y, 2))
         if distance < 2.0 { return } // 如果移动距离小于2像素，跳过更新
-        
+
         dragPreviewPosition = iconCenter
         
         // 性能优化：使用节流机制减少计算频率
@@ -2351,10 +2513,7 @@ extension LaunchpadView {
             return
         }
         
-        // 异步更新几何缓存时间戳，避免在视图更新期间修改状态
-        DispatchQueue.main.async {
-            Self.lastGeometryUpdate = now
-        }
+        Self.lastGeometryUpdate = now
         
         if let hoveringIndex = indexAt(point: hoverPoint,
                                        in: containerSize,
@@ -2386,8 +2545,7 @@ extension LaunchpadView {
             return
         }
 
-        let pointerPoint = CGPoint(x: dragPreviewPosition.x + dragPointerOffset.x,
-                                   y: dragPreviewPosition.y + dragPointerOffset.y)
+        let pointerPoint = dragPreviewPosition
         let isInCenterArea = isPointInCenterArea(
             point: pointerPoint,
             targetIndex: hoveringIndex,
@@ -2403,6 +2561,11 @@ extension LaunchpadView {
         switch hoveringItem {
         case .app(let targetApp):
             handleAppHover(dragging: dragging, targetApp: targetApp, hoveringIndex: hoveringIndex, isInCenterArea: isInCenterArea)
+        case .missingApp(let placeholder):
+            handleMissingHover(dragging: dragging,
+                                placeholder: placeholder,
+                                hoveringIndex: hoveringIndex,
+                                isInCenterArea: isInCenterArea)
         case .folder(_):
             handleFolderHover(dragging: dragging, hoveringIndex: hoveringIndex, isInCenterArea: isInCenterArea)
         case .empty:
@@ -2411,7 +2574,7 @@ extension LaunchpadView {
             pendingDropIndex = hoveringIndex
         }
     }
-    
+
     private func handleAppHover(dragging: LaunchpadItem, targetApp: AppInfo, hoveringIndex: Int, isInCenterArea: Bool) {
         if dragging == .app(targetApp) {
             clearHoveringState()
@@ -2420,6 +2583,21 @@ extension LaunchpadView {
             handleAppToAppHover(hoveringIndex: hoveringIndex, isInCenterArea: isInCenterArea, targetApp: targetApp)
         } else {
             clearHoveringState()
+            pendingDropIndex = hoveringIndex
+        }
+    }
+
+    private func handleMissingHover(dragging: LaunchpadItem,
+                                     placeholder: MissingAppPlaceholder,
+                                     hoveringIndex: Int,
+                                     isInCenterArea: Bool) {
+        appStore.isDragCreatingFolder = false
+        appStore.folderCreationTarget = nil
+        if case .missingApp(let draggingPlaceholder) = dragging,
+           draggingPlaceholder.id == placeholder.id {
+            clearHoveringState()
+            pendingDropIndex = hoveringIndex
+        } else {
             pendingDropIndex = hoveringIndex
         }
     }

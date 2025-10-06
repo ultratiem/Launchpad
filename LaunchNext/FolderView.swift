@@ -27,6 +27,10 @@ struct FolderView: View {
     
     let onClose: () -> Void
     let onLaunchApp: (AppInfo) -> Void
+
+    private func canLaunch(_ app: AppInfo) -> Bool {
+        FileManager.default.fileExists(atPath: app.url.path)
+    }
     
     // 优化间距和布局参数
     private let spacing: CGFloat = 30
@@ -298,10 +302,14 @@ extension FolderView {
             hoverMagnificationScale: CGFloat(appStore.hoverMagnificationScale),
             activePressEffectEnabled: appStore.enableActivePressEffect,
             activePressScale: CGFloat(appStore.activePressScale),
-            onTap: { 
+            onTap: {
                 // 在编辑状态下不启动应用
-                if draggingApp == nil && !isEditingName { 
-                    onLaunchApp(app) 
+                if draggingApp == nil && !isEditingName {
+                    if canLaunch(app) {
+                        onLaunchApp(app)
+                    } else {
+                        NSSound.beep()
+                    }
                 }
             }
         )
@@ -310,15 +318,19 @@ extension FolderView {
 
         let isDraggingThisTile = (draggingApp == app)
 
-        base
-            .opacity(isDraggingThisTile ? 0 : 1)
-            .allowsHitTesting(!isDraggingThisTile)
-            .animation(LNAnimations.springFast, value: isSelected)
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 2, coordinateSpace: .named("folderGrid"))
-                    .onChanged { value in
-                        // 在编辑状态下禁用拖拽
-                        if isEditingName { return }
+        if appStore.isLayoutLocked {
+            base
+        } else {
+            base
+                .opacity(isDraggingThisTile ? 0 : 1)
+                .allowsHitTesting(!isDraggingThisTile)
+                .animation(LNAnimations.springFast, value: isSelected)
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 2, coordinateSpace: .named("folderGrid"))
+                        .onChanged { value in
+                            guard !appStore.isLayoutLocked else { return }
+                            // 在编辑状态下禁用拖拽
+                            if isEditingName { return }
                         
                         if draggingApp == nil {
                             var tx = Transaction(); tx.disablesAnimations = true
@@ -378,6 +390,7 @@ extension FolderView {
                         }
                     }
                     .onEnded { _ in
+                        if appStore.isLayoutLocked { return }
                         // 在编辑状态下不处理拖拽结束
                         if isEditingName { return }
                         
@@ -424,8 +437,9 @@ extension FolderView {
                                 }
                             }
                         }
-                    }
-            )
+                        }
+                )
+        }
     }
 }
 
@@ -523,7 +537,12 @@ extension FolderView {
                 return nil
             }
             if let idx = selectedIndex, folder.apps.indices.contains(idx) {
-                onLaunchApp(folder.apps[idx])
+                let targetApp = folder.apps[idx]
+                if canLaunch(targetApp) {
+                    onLaunchApp(targetApp)
+                } else {
+                    NSSound.beep()
+                }
                 return nil
             }
             return event

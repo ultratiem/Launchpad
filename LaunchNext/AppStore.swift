@@ -6,6 +6,7 @@ import SwiftData
 import UniformTypeIdentifiers
 import Carbon
 import Carbon.HIToolbox
+import ServiceManagement
 
 enum AppearancePreference: String, CaseIterable, Identifiable {
     case system
@@ -143,6 +144,7 @@ final class AppStore: ObservableObject {
     private static let rowSpacingKey = "gridRowSpacing"
     private static let iconLabelFontWeightKey = "iconLabelFontWeight"
     private static let showQuickRefreshButtonKey = "showQuickRefreshButton"
+    private static let lockLayoutKey = "lockLayoutEnabled"
     private static let rememberPageKey = "rememberLastPage"
     private static let rememberedPageIndexKey = "rememberedPageIndex"
     private static let globalHotKeyKey = "globalHotKeyConfiguration"
@@ -317,6 +319,7 @@ final class AppStore: ObservableObject {
     @Published var apps: [AppInfo] = []
     @Published var folders: [FolderInfo] = []
     @Published var items: [LaunchpadItem] = []
+    @Published private(set) var missingPlaceholders: [String: MissingAppPlaceholder] = [:]
     @Published private(set) var hiddenAppPaths: Set<String> = AppStore.loadHiddenApps()
 
     private func persistHiddenApps(_ set: Set<String>) {
@@ -351,7 +354,41 @@ final class AppStore: ObservableObject {
     }
     @Published var searchText: String = ""
     @Published private(set) var searchQuery: String = ""
-    @Published var isStartOnLogin: Bool = false
+    @Published var isStartOnLogin: Bool = {
+        if #available(macOS 13.0, *) {
+            return SMAppService.mainApp.status == .enabled
+        }
+        return false
+    }() {
+        didSet {
+            guard !loginItemUpdateInProgress else { return }
+            guard isStartOnLogin != oldValue else { return }
+            guard #available(macOS 13.0, *) else {
+                loginItemUpdateInProgress = true
+                isStartOnLogin = false
+                loginItemUpdateInProgress = false
+                return
+            }
+
+            loginItemUpdateInProgress = true
+            defer { loginItemUpdateInProgress = false }
+
+            do {
+                if isStartOnLogin {
+                    try SMAppService.mainApp.register()
+                } else {
+                    try SMAppService.mainApp.unregister()
+                }
+            } catch {
+                NSLog("LaunchNext: Failed to update login item setting - %@", error.localizedDescription)
+                isStartOnLogin = oldValue
+            }
+        }
+    }
+    var canConfigureStartOnLogin: Bool {
+        if #available(macOS 13.0, *) { return true }
+        return false
+    }
     @Published var isFullscreenMode: Bool = false {
         didSet {
             UserDefaults.standard.set(isFullscreenMode, forKey: "isFullscreenMode")
@@ -570,6 +607,17 @@ final class AppStore: ObservableObject {
         didSet {
             guard showQuickRefreshButton != oldValue else { return }
             UserDefaults.standard.set(showQuickRefreshButton, forKey: AppStore.showQuickRefreshButtonKey)
+        }
+    }
+
+    @Published var isLayoutLocked: Bool = {
+        if UserDefaults.standard.object(forKey: AppStore.lockLayoutKey) == nil { return false }
+        return UserDefaults.standard.bool(forKey: AppStore.lockLayoutKey)
+    }() {
+        didSet {
+            guard isLayoutLocked != oldValue else { return }
+            UserDefaults.standard.set(isLayoutLocked, forKey: AppStore.lockLayoutKey)
+            triggerGridRefresh()
         }
     }
 
@@ -812,18 +860,378 @@ final class AppStore: ObservableObject {
     private let customIconFileURL: URL
     private let defaultAppIcon: NSImage
     private var autoCheckTimer: DispatchSourceTimer?
+    private var loginItemUpdateInProgress = false
+    private var volumeObservers: [NSObjectProtocol] = []
     
     // 计算属性
     private var itemsPerPage: Int { gridColumnsPerPage * gridRowsPerPage }
+
+    var builtinAppSourcePaths: [String] { systemApplicationSearchPaths }
+
+    private var applicationSearchPaths: [String] {
+        var seen = Set<String>()
+        var result: [String] = []
+        let candidates = systemApplicationSearchPaths + customAppSourcePaths
+        let fileManager = FileManager.default
+
+        for raw in candidates {
+            guard let standardized = normalizeApplicationPath(raw) else { continue }
+            guard !standardized.isEmpty, !seen.contains(standardized) else { continue }
+
+            var isDirectory: ObjCBool = false
+            if fileManager.fileExists(atPath: standardized, isDirectory: &isDirectory), isDirectory.boolValue {
+                seen.insert(standardized)
+                result.append(standardized)
+            }
+        }
+
+        return result
+    }
+
+    private func normalizeApplicationPath(_ path: String) -> String? {
+        let expanded = (path as NSString).expandingTildeInPath
+        guard !expanded.isEmpty else { return nil }
+        return URL(fileURLWithPath: expanded).standardized.path
+    }
+
+    private func standardizedFilePath(_ path: String) -> String {
+        URL(fileURLWithPath: path).standardized.path
+    }
+
+    private func removableSourcePath(forAppPath path: String) -> String? {
+        let standardizedApp = standardizedFilePath(path)
+        for source in customAppSourcePaths {
+            guard let normalizedSource = normalizeApplicationPath(source) else { continue }
+            if standardizedApp == normalizedSource { return normalizedSource }
+            if standardizedApp.hasPrefix(normalizedSource.hasSuffix("/") ? normalizedSource : normalizedSource + "/") {
+                return normalizedSource
+            }
+        }
+        return nil
+    }
+
+    private func placeholderDisplayName(for path: String, preferred: String?) -> String {
+        let normalizedPath = standardizedFilePath(path)
+        let legacyMatch = missingPlaceholders.first { standardizedFilePath($0.key) == normalizedPath }?.value.displayName
+        let candidates: [String?] = [preferred,
+                                     missingPlaceholders[normalizedPath]?.displayName,
+                                     legacyMatch,
+                                     URL(fileURLWithPath: normalizedPath).deletingPathExtension().lastPathComponent]
+        for candidate in candidates {
+            if let trimmed = candidate?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty {
+                return trimmed
+            }
+        }
+        return normalizedPath
+    }
+
+    private func updateMissingPlaceholder(path: String,
+                                          displayName: String? = nil,
+                                          removableSource: String? = nil) -> MissingAppPlaceholder? {
+        let normalizedPath = standardizedFilePath(path)
+        let resolvedDisplayName = placeholderDisplayName(for: normalizedPath, preferred: displayName)
+        let resolvedSource = removableSource ?? removableSourcePath(forAppPath: normalizedPath) ?? missingPlaceholders[normalizedPath]?.removableSource
+        guard shouldTrackMissingPlaceholder(at: normalizedPath, removableSource: resolvedSource) else {
+            missingPlaceholders.removeValue(forKey: normalizedPath)
+            return nil
+        }
+
+        let placeholder = MissingAppPlaceholder(bundlePath: normalizedPath,
+                                               displayName: resolvedDisplayName,
+                                               removableSource: resolvedSource)
+        missingPlaceholders[normalizedPath] = placeholder
+        if missingPlaceholders.count > 1 {
+            missingPlaceholders = missingPlaceholders.filter { key, _ in
+                let normalizedKey = standardizedFilePath(key)
+                return normalizedKey != normalizedPath || key == normalizedPath
+            }
+            missingPlaceholders[normalizedPath] = placeholder
+        }
+        return placeholder
+    }
+
+    private func shouldTrackMissingPlaceholder(at normalizedPath: String,
+                                               removableSource: String?) -> Bool {
+        guard let removableSource else { return false }
+
+        let normalizedSource = normalizeApplicationPath(removableSource) ?? standardizedFilePath(removableSource)
+        let customSources = customAppSourcePaths.map { normalizeApplicationPath($0) ?? standardizedFilePath($0) }
+        return customSources.contains(normalizedSource)
+    }
+
+    private func clearMissingPlaceholder(for path: String) {
+        missingPlaceholders.removeValue(forKey: standardizedFilePath(path))
+    }
+
+    private func currentMissingAppItem(for placeholder: MissingAppPlaceholder) -> LaunchpadItem? {
+        let normalizedPath = standardizedFilePath(placeholder.bundlePath)
+        guard let currentPlaceholder = missingPlaceholders[normalizedPath] else { return nil }
+        return .missingApp(currentPlaceholder)
+    }
+
+    private func placeholderAppInfo(forMissingPath path: String, preferredName: String? = nil) -> AppInfo? {
+        guard let placeholder = updateMissingPlaceholder(path: path, displayName: preferredName) else {
+            return nil
+        }
+        let placeholderURL = URL(fileURLWithPath: placeholder.bundlePath)
+        let info = AppInfo(name: placeholder.displayName,
+                           icon: placeholder.icon,
+                           url: placeholderURL)
+        return info
+    }
+
+    private func refreshMissingPlaceholders() {
+        guard !items.isEmpty else {
+            if !missingPlaceholders.isEmpty {
+                missingPlaceholders.removeAll()
+            }
+            return
+        }
+
+        var updatedItems = items
+        var mutated = false
+        let fileManager = FileManager.default
+
+        for index in updatedItems.indices {
+            switch updatedItems[index] {
+            case .app(let app):
+                let path = standardizedFilePath(app.url.path)
+                if fileManager.fileExists(atPath: path) {
+                    clearMissingPlaceholder(for: path)
+                } else {
+                    if let placeholder = updateMissingPlaceholder(path: path, displayName: app.name) {
+                        updatedItems[index] = .missingApp(placeholder)
+                    } else {
+                        updatedItems[index] = .empty(UUID().uuidString)
+                    }
+                    mutated = true
+                }
+            case .missingApp(let placeholder):
+                let path = standardizedFilePath(placeholder.bundlePath)
+                if fileManager.fileExists(atPath: path) {
+                    if let existing = apps.first(where: { standardizedFilePath($0.url.path) == path }) {
+                        clearMissingPlaceholder(for: path)
+                        updatedItems[index] = .app(existing)
+                        mutated = true
+                    } else {
+                        let url = URL(fileURLWithPath: path)
+                        let info = appInfo(from: url, preferredName: placeholder.displayName)
+                        clearMissingPlaceholder(for: path)
+                        if !apps.contains(where: { standardizedFilePath($0.url.path) == path }) {
+                            apps.append(info)
+                            apps.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+                            pruneHiddenAppsFromAppList()
+                        }
+                        updatedItems[index] = .app(info)
+                        mutated = true
+                    }
+                } else {
+                    if updateMissingPlaceholder(path: path,
+                                                displayName: placeholder.displayName,
+                                                removableSource: placeholder.removableSource) == nil {
+                        updatedItems[index] = .empty(UUID().uuidString)
+                        mutated = true
+                    }
+                }
+            default:
+                break
+            }
+        }
+
+        if mutated {
+            updatedItems = filteredItemsRemovingHidden(from: updatedItems)
+            items = updatedItems
+        }
+
+        let placeholderPathsInUse = Set(updatedItems.compactMap { item -> String? in
+            if case let .missingApp(placeholder) = item { return standardizedFilePath(placeholder.bundlePath) }
+            return nil
+        })
+        if placeholderPathsInUse.count != missingPlaceholders.count {
+            missingPlaceholders = missingPlaceholders.filter { key, _ in
+                placeholderPathsInUse.contains(standardizedFilePath(key))
+            }
+        }
+    }
+
+    private func purgeMissingPlaceholders(forRemovedSources rawSources: [String]) {
+        guard !rawSources.isEmpty else { return }
+        let normalizedSources = rawSources.compactMap { path in
+            normalizeApplicationPath(path) ?? standardizedFilePath(path)
+        }
+        guard !normalizedSources.isEmpty else { return }
+        let sourceSet = Set(normalizedSources)
+
+        var removalSet = Set<String>()
+        var removalRawPaths = Set<String>()
+        for (key, placeholder) in missingPlaceholders {
+            let normalizedKey = standardizedFilePath(key)
+
+            var matchesRemovedSource = false
+            if let source = placeholder.removableSource {
+                let normalizedSource = normalizeApplicationPath(source) ?? standardizedFilePath(source)
+                if sourceSet.contains(normalizedSource) {
+                    matchesRemovedSource = true
+                }
+            }
+
+            if !matchesRemovedSource {
+                matchesRemovedSource = sourceSet.contains { source in
+                    if normalizedKey == source { return true }
+                    let prefix = source.hasSuffix("/") ? source : source + "/"
+                    return normalizedKey.hasPrefix(prefix)
+                }
+            }
+
+            if matchesRemovedSource {
+                removalSet.insert(normalizedKey)
+                removalRawPaths.insert(key)
+            }
+        }
+
+        // 主动添加所有来自已移除源的现存应用路径（无论是否缺失）
+        if !sourceSet.isEmpty {
+            let prefixes: [String] = sourceSet.map { $0.hasSuffix("/") ? $0 : $0 + "/" }
+
+            func considerRemoval(path raw: String) {
+                let normalized = standardizedFilePath(raw)
+                if sourceSet.contains(normalized) || prefixes.contains(where: { normalized.hasPrefix($0) }) {
+                    removalSet.insert(normalized)
+                    removalRawPaths.insert(raw)
+                }
+            }
+
+            for app in apps {
+                considerRemoval(path: app.url.path)
+            }
+
+            for folder in folders {
+                for app in folder.apps {
+                    considerRemoval(path: app.url.path)
+                }
+            }
+
+            for item in items {
+                switch item {
+                case .app(let app):
+                    considerRemoval(path: app.url.path)
+                case .missingApp(let placeholder):
+                    considerRemoval(path: placeholder.bundlePath)
+                case .folder(let folder):
+                    for app in folder.apps {
+                        considerRemoval(path: app.url.path)
+                    }
+                case .empty:
+                    break
+                }
+            }
+        }
+
+        guard !removalSet.isEmpty else { return }
+
+        var updatedItems = items
+        var mutatedItems = false
+        for index in updatedItems.indices {
+            switch updatedItems[index] {
+            case .missingApp(let placeholder):
+                if removalSet.contains(standardizedFilePath(placeholder.bundlePath)) {
+                    updatedItems[index] = .empty(UUID().uuidString)
+                    mutatedItems = true
+                }
+            case .app(let app):
+                if removalSet.contains(standardizedFilePath(app.url.path)) {
+                    updatedItems[index] = .empty(UUID().uuidString)
+                    mutatedItems = true
+                }
+            case .folder(var folder):
+                let originalCount = folder.apps.count
+                folder.apps.removeAll { removalSet.contains(standardizedFilePath($0.url.path)) }
+                if folder.apps.count != originalCount {
+                    mutatedItems = true
+                    if folder.apps.isEmpty {
+                        updatedItems[index] = .empty(UUID().uuidString)
+                    } else {
+                        updatedItems[index] = .folder(folder)
+                    }
+                }
+            case .empty:
+                break
+            }
+        }
+        if mutatedItems {
+            updatedItems = filteredItemsRemovingHidden(from: updatedItems)
+            items = updatedItems
+        }
+
+        if !removalSet.isEmpty {
+            apps.removeAll { removalSet.contains(standardizedFilePath($0.url.path)) }
+            for idx in folders.indices {
+                folders[idx].apps.removeAll { removalSet.contains(standardizedFilePath($0.url.path)) }
+            }
+            pruneHiddenAppsFromAppList()
+            if !customTitles.isEmpty {
+                customTitles = customTitles.filter { key, _ in
+                    !removalSet.contains(standardizedFilePath(key))
+                }
+            }
+            if !hiddenAppPaths.isEmpty {
+                updateHiddenAppPaths { hidden in
+                    for path in removalSet { hidden.remove(path) }
+                    for raw in removalRawPaths { hidden.remove(raw) }
+                }
+            }
+        }
+
+        missingPlaceholders = missingPlaceholders.filter { key, _ in
+            !removalSet.contains(standardizedFilePath(key))
+        }
+
+        triggerFolderUpdate()
+        triggerGridRefresh()
+        compactItemsWithinPages()
+        refreshMissingPlaceholders()
+        saveAllOrder()
+    }
+
+    private func sanitizedCustomPaths(from rawPaths: [String]) -> [String] {
+        var seen = Set<String>()
+        var result: [String] = []
+
+        for raw in rawPaths {
+            guard let normalized = normalizeApplicationPath(raw) else { continue }
+            if seen.insert(normalized).inserted {
+                result.append(normalized)
+            }
+        }
+
+        return result
+    }
     
 
 
-    private let applicationSearchPaths: [String] = [
+    private let systemApplicationSearchPaths: [String] = [
         "/Applications",
         "\(NSHomeDirectory())/Applications",
         "/System/Applications",
         "/System/Cryptexes/App/System/Applications"
     ]
+
+    private static let customAppSourcesKey = "customApplicationSourcePaths"
+
+    @Published var customAppSourcePaths: [String] = {
+        guard let saved = UserDefaults.standard.array(forKey: AppStore.customAppSourcesKey) as? [String] else { return [] }
+        return saved
+    }() {
+        didSet {
+            guard customAppSourcePaths != oldValue else { return }
+            UserDefaults.standard.set(customAppSourcePaths, forKey: AppStore.customAppSourcesKey)
+            restartAutoRescan()
+            scanApplicationsWithOrderPreservation()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+                self?.removeEmptyPages()
+            }
+        }
+    }
 
     init() {
         if UserDefaults.standard.object(forKey: "isFullscreenMode") == nil {
@@ -904,6 +1312,13 @@ final class AppStore: ObservableObject {
         }
         applyCurrentAppIcon()
 
+        let sanitizedSources = sanitizedCustomPaths(from: customAppSourcePaths)
+        if sanitizedSources != customAppSourcePaths {
+            customAppSourcePaths = sanitizedSources
+        }
+
+        setupVolumeObservers()
+
         $searchText
             .debounce(for: .milliseconds(500), scheduler: DispatchQueue.main)
             .removeDuplicates()
@@ -920,6 +1335,15 @@ final class AppStore: ObservableObject {
         if shouldRememberPage, let savedPageIndex {
             self.currentPage = max(0, savedPageIndex)
         }
+
+        syncLoginItemStatusFromSystem()
+    }
+
+    func syncLoginItemStatusFromSystem() {
+        guard #available(macOS 13.0, *) else { return }
+        loginItemUpdateInProgress = true
+        isStartOnLogin = SMAppService.mainApp.status == .enabled
+        loginItemUpdateInProgress = false
     }
 
     private static func loadCustomTitles() -> [String: String] {
@@ -1071,6 +1495,7 @@ final class AppStore: ObservableObject {
                     self.items = self.filteredItemsRemovingHidden(from: sorted.map { .app($0) })
                     self.saveAllOrder()
                 }
+                self.refreshMissingPlaceholders()
                 
                 // 扫描完成后生成缓存
                 self.generateCacheAfterScan()
@@ -1179,29 +1604,17 @@ final class AppStore: ObservableObject {
         var updatedApps: [AppInfo] = []
         var newAppsToAdd: [AppInfo] = []
         let freshMap: [String: AppInfo] = Dictionary(uniqueKeysWithValues: newApps.map { ($0.url.path, $0) })
-        
+
         // 第一步：保持现有顺序，同时用最新扫描结果刷新应用信息
         for app in self.apps {
-            if let refreshed = freshMap[app.url.path] {
-                updatedApps.append(refreshed)
-            } else {
-                // 应用已删除，从所有相关位置移除
-                self.removeDeletedApp(app)
-            }
+            updatedApps.append(freshMap[app.url.path] ?? app)
         }
-        
+
         // 同步更新文件夹中的应用对象，确保名称/图标及时刷新
         for folderIndex in folders.indices {
-            let refreshedApps = folders[folderIndex].apps.compactMap { freshMap[$0.url.path] }
-            if refreshedApps.isEmpty {
-                folders[folderIndex].apps.removeAll()
-            } else if refreshedApps.count != folders[folderIndex].apps.count {
-                folders[folderIndex].apps = refreshedApps
-            } else {
-                folders[folderIndex].apps = refreshedApps
-            }
+            let refreshedApps = folders[folderIndex].apps.map { freshMap[$0.url.path] ?? $0 }
+            folders[folderIndex].apps = refreshedApps
         }
-        folders.removeAll { $0.apps.isEmpty }
         
         // 第二步：找出新增的应用（顺序保持与扫描结果一致）
         let existingPaths = Set(updatedApps.map { $0.url.path })
@@ -1221,33 +1634,17 @@ final class AppStore: ObservableObject {
         
         // 第五步：自动页面内补位
         self.compactItemsWithinPages()
-        
+
+        // 第五步半：根据最新磁盘状态同步缺失占位符
+        self.refreshMissingPlaceholders()
+
         // 第六步：保存新的顺序
         self.saveAllOrder()
-        
+
         // 触发界面更新
         self.triggerFolderUpdate()
         self.triggerGridRefresh()
     }
-    
-    /// 移除已删除的应用
-    private func removeDeletedApp(_ deletedApp: AppInfo) {
-        // 从文件夹中移除
-        for folderIndex in self.folders.indices {
-            self.folders[folderIndex].apps.removeAll { $0 == deletedApp }
-        }
-        
-        // 清理空文件夹
-        self.folders.removeAll { $0.apps.isEmpty }
-        
-        // 从顶层项目中移除，替换为空槽位
-        for itemIndex in self.items.indices {
-            if case let .app(app) = self.items[itemIndex], app == deletedApp {
-                self.items[itemIndex] = .empty(UUID().uuidString)
-            }
-        }
-    }
-    
     
     /// 严格保持现有顺序的重建方法
     private func rebuildItemsWithStrictOrderPreservation(currentItems: [LaunchpadItem]) {
@@ -1274,8 +1671,9 @@ final class AppStore: ObservableObject {
                 }
                 
             case .app(let app):
+                let standardizedPath = standardizedFilePath(app.url.path)
                 // 检查应用是否仍然存在
-                if self.apps.contains(where: { $0.url.path == app.url.path }) {
+                if self.apps.contains(where: { standardizedFilePath($0.url.path) == standardizedPath }) {
                     if !appsInFolders.contains(app) {
                         // 应用仍然存在且不在文件夹中，保持原有位置
                         newItems.append(.app(app))
@@ -1284,23 +1682,39 @@ final class AppStore: ObservableObject {
                         newItems.append(.empty(UUID().uuidString))
                     }
                 } else {
-                    // 应用已删除，保持空槽位
+                    // 应用缺失：转换为占位符
+                    if let placeholder = updateMissingPlaceholder(path: standardizedPath, displayName: app.name) {
+                        newItems.append(.missingApp(placeholder))
+                    } else {
+                        newItems.append(.empty(UUID().uuidString))
+                    }
+                }
+            case .missingApp(let placeholder):
+                if let item = currentMissingAppItem(for: placeholder) {
+                    newItems.append(item)
+                } else {
                     newItems.append(.empty(UUID().uuidString))
                 }
-                
             case .empty(let token):
                 // 保持空槽位，维持页面布局
                 newItems.append(.empty(token))
             }
         }
-        
+
         // 添加新增的自由应用（不在任何文件夹中）到最后一页的最后面
-        let existingAppPaths = Set(newItems.compactMap { item in
-            if case let .app(app) = item { return app.url.path } else { return nil }
+        let existingAppPaths = Set(newItems.compactMap { item -> String? in
+            switch item {
+            case .app(let app):
+                return standardizedFilePath(app.url.path)
+            case .missingApp(let placeholder):
+                return standardizedFilePath(placeholder.bundlePath)
+            default:
+                return nil
+            }
         })
         
         let newFreeApps = self.apps.filter { app in
-            !appsInFolders.contains(app) && !existingAppPaths.contains(app.url.path)
+            !appsInFolders.contains(app) && !existingAppPaths.contains(standardizedFilePath(app.url.path))
         }
         
         if !newFreeApps.isEmpty {
@@ -1410,8 +1824,9 @@ final class AppStore: ObservableObject {
                 }
                 
             case .app(let app):
+                let standardizedPath = standardizedFilePath(app.url.path)
                 // 检查应用是否仍然存在
-                if self.apps.contains(where: { $0.url.path == app.url.path }) {
+                if self.apps.contains(where: { standardizedFilePath($0.url.path) == standardizedPath }) {
                     if !appsInFolders.contains(app) {
                         // 应用仍然存在且不在文件夹中，更新为最新信息
                         let updatedApp = refreshedAppsByPath[app.url.path] ?? app
@@ -1421,23 +1836,39 @@ final class AppStore: ObservableObject {
                         newItems.append(.empty(UUID().uuidString))
                     }
                 } else {
-                    // 应用已删除，保持空槽位
+                    // 应用缺失：转换为占位符
+                    if let placeholder = updateMissingPlaceholder(path: standardizedPath, displayName: app.name) {
+                        newItems.append(.missingApp(placeholder))
+                    } else {
+                        newItems.append(.empty(UUID().uuidString))
+                    }
+                }
+            case .missingApp(let placeholder):
+                if let item = currentMissingAppItem(for: placeholder) {
+                    newItems.append(item)
+                } else {
                     newItems.append(.empty(UUID().uuidString))
                 }
-                
             case .empty(let token):
                 // 保持空槽位，维持页面布局
                 newItems.append(.empty(token))
             }
         }
-        
+
         // 第二步：添加新增的自由应用（不在任何文件夹中）到最后一页的最后面
-        let existingAppPaths = Set(newItems.compactMap { item in
-            if case let .app(app) = item { return app.url.path } else { return nil }
+        let existingAppPaths = Set(newItems.compactMap { item -> String? in
+            switch item {
+            case .app(let app):
+                return standardizedFilePath(app.url.path)
+            case .missingApp(let placeholder):
+                return standardizedFilePath(placeholder.bundlePath)
+            default:
+                return nil
+            }
         })
-        
+
         let newFreeApps = self.apps.filter { app in
-            !appsInFolders.contains(app) && !existingAppPaths.contains(app.url.path)
+            !appsInFolders.contains(app) && !existingAppPaths.contains(standardizedFilePath(app.url.path))
         }
         
         if !newFreeApps.isEmpty {
@@ -1506,8 +1937,10 @@ final class AppStore: ObservableObject {
                             return existing
                         }
                         let url = URL(fileURLWithPath: path)
-                        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
-                        return self.appInfo(from: url)
+                        if FileManager.default.fileExists(atPath: url.path) {
+                            return self.appInfo(from: url)
+                        }
+                        return self.placeholderAppInfo(forMissingPath: path)
                     }
                     
                     let folder = FolderInfo(id: fid, name: row.folderName ?? "Untitled", apps: folderApps, createdAt: row.createdAt)
@@ -1524,13 +1957,16 @@ final class AppStore: ObservableObject {
     deinit {
         autoCheckTimer?.cancel()
         stopAutoRescan()
+        let center = NSWorkspace.shared.notificationCenter
+        volumeObservers.forEach { center.removeObserver($0) }
     }
 
     // MARK: - FSEvents wiring
     func startAutoRescan() {
         guard fsEventStream == nil else { return }
 
-        let pathsToWatch: [String] = applicationSearchPaths
+        let pathsToWatch = applicationSearchPaths
+        guard !pathsToWatch.isEmpty else { return }
         var context = FSEventStreamContext(
             version: 0,
             info: UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque()),
@@ -1582,6 +2018,86 @@ final class AppStore: ObservableObject {
         FSEventStreamInvalidate(stream)
         FSEventStreamRelease(stream)
         fsEventStream = nil
+    }
+
+    func restartAutoRescan() {
+        stopAutoRescan()
+        startAutoRescan()
+    }
+
+    @discardableResult
+    func addCustomAppSource(path: String) -> Bool {
+        guard let normalized = normalizeApplicationPath(path) else { return false }
+        if customAppSourcePaths.contains(where: { normalizeApplicationPath($0) == normalized }) { return false }
+        customAppSourcePaths.append(normalized)
+        return true
+    }
+
+    func removeCustomAppSource(at index: Int) {
+        guard customAppSourcePaths.indices.contains(index) else { return }
+        let removed = customAppSourcePaths[index]
+        purgeMissingPlaceholders(forRemovedSources: [removed])
+        customAppSourcePaths.remove(at: index)
+    }
+
+    func removeCustomAppSources(at offsets: IndexSet) {
+        let removed = offsets.compactMap { offset -> String? in
+            guard customAppSourcePaths.indices.contains(offset) else { return nil }
+            return customAppSourcePaths[offset]
+        }
+        purgeMissingPlaceholders(forRemovedSources: removed)
+        customAppSourcePaths.remove(atOffsets: offsets)
+    }
+
+    func resetCustomAppSources() {
+        guard !customAppSourcePaths.isEmpty else { return }
+        let removed = customAppSourcePaths
+        purgeMissingPlaceholders(forRemovedSources: removed)
+        customAppSourcePaths.removeAll()
+    }
+
+    func removeCustomAppSource(path: String) {
+        guard let normalized = normalizeApplicationPath(path) else { return }
+        if let index = customAppSourcePaths.firstIndex(where: { normalizeApplicationPath($0) == normalized }) {
+            let removed = customAppSourcePaths[index]
+            purgeMissingPlaceholders(forRemovedSources: [removed])
+            customAppSourcePaths.remove(at: index)
+        }
+    }
+
+    private func setupVolumeObservers() {
+        let center = NSWorkspace.shared.notificationCenter
+
+        let mountObserver = center.addObserver(forName: NSWorkspace.didMountNotification, object: nil, queue: .main) { [weak self] notification in
+            guard let self, let url = notification.userInfo?[NSWorkspace.volumeURLUserInfoKey] as? URL else { return }
+            self.handleVolumeEvent(at: url, isMount: true)
+        }
+
+        let unmountObserver = center.addObserver(forName: NSWorkspace.didUnmountNotification, object: nil, queue: .main) { [weak self] notification in
+            guard let self, let url = notification.userInfo?[NSWorkspace.volumeURLUserInfoKey] as? URL else { return }
+            self.handleVolumeEvent(at: url, isMount: false)
+        }
+
+        volumeObservers = [mountObserver, unmountObserver]
+    }
+
+    private func handleVolumeEvent(at url: URL, isMount: Bool) {
+        let volumePath = url.standardizedFileURL.path
+        guard !volumePath.isEmpty else { return }
+
+        let relevant = customAppSourcePaths.contains { source in
+            guard let normalized = normalizeApplicationPath(source) else { return false }
+            return normalized.hasPrefix(volumePath)
+        }
+
+        guard relevant else { return }
+
+        let delay: TimeInterval = isMount ? 1.0 : 0.2
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self else { return }
+            self.restartAutoRescan()
+            self.scanApplicationsWithOrderPreservation()
+        }
     }
 
     private func handleFSEvents(paths: [String], flagsPointer: UnsafePointer<FSEventStreamEventFlags>?, count: Int) {
@@ -1674,28 +2190,7 @@ final class AppStore: ObservableObject {
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
                 
-                // 应用删除
-                if changes.contains(where: { if case .remove = $0 { return true } else { return false } }) {
-                    var indicesToRemove: [Int] = []
-                    var map: [String: Int] = [:]
-                    for (idx, app) in self.apps.enumerated() { map[app.url.path] = idx }
-                    for change in changes {
-                        if case .remove(let path) = change, let idx = map[path] {
-                            indicesToRemove.append(idx)
-                        }
-                    }
-                    for idx in indicesToRemove.sorted(by: >) {
-                        let removed = self.apps.remove(at: idx)
-                        for fIdx in self.folders.indices { self.folders[fIdx].apps.removeAll { $0 == removed } }
-                        if !self.items.isEmpty {
-                            for i in 0..<self.items.count {
-                                if case let .app(a) = self.items[i], a == removed { self.items[i] = .empty(UUID().uuidString) }
-                            }
-                        }
-                    }
-                    self.compactItemsWithinPages()
-                    self.rebuildItems()
-                }
+                // 应用删除事件：保留现有图标，等待卷重新挂载
                 
                 // 应用更新
                 let updates: [AppInfo] = changes.compactMap { if case .update(let info) = $0 { return info } else { return nil } }
@@ -1703,6 +2198,7 @@ final class AppStore: ObservableObject {
                     var map: [String: Int] = [:]
                     for (idx, app) in self.apps.enumerated() { map[app.url.path] = idx }
                     for info in updates {
+                        let standardizedInfoPath = self.standardizedFilePath(info.url.path)
                         if let idx = map[info.url.path], self.apps.indices.contains(idx) { self.apps[idx] = info }
                         for fIdx in self.folders.indices {
                             for aIdx in self.folders[fIdx].apps.indices where self.folders[fIdx].apps[aIdx].url.path == info.url.path {
@@ -1710,7 +2206,20 @@ final class AppStore: ObservableObject {
                             }
                         }
                         for iIdx in self.items.indices {
-                            if case .app(let a) = self.items[iIdx], a.url.path == info.url.path { self.items[iIdx] = .app(info) }
+                            switch self.items[iIdx] {
+                            case .app(let a):
+                                if self.standardizedFilePath(a.url.path) == standardizedInfoPath {
+                                    self.items[iIdx] = .app(info)
+                                    self.clearMissingPlaceholder(for: standardizedInfoPath)
+                                }
+                            case .missingApp(let placeholder):
+                                if self.standardizedFilePath(placeholder.bundlePath) == standardizedInfoPath {
+                                    self.items[iIdx] = .app(info)
+                                    self.clearMissingPlaceholder(for: standardizedInfoPath)
+                                }
+                            default:
+                                break
+                            }
                         }
                     }
                     self.rebuildItems()
@@ -1727,6 +2236,7 @@ final class AppStore: ObservableObject {
                 // 刷新与持久化
                 self.triggerFolderUpdate()
                 self.triggerGridRefresh()
+                self.refreshMissingPlaceholders()
                 self.saveAllOrder()
                 self.updateCacheAfterChanges()
             }
@@ -1773,15 +2283,21 @@ final class AppStore: ObservableObject {
         // 在当前 items 中：将这些 app 的顶层条目替换为空槽，并在目标位置放置文件夹，保持总长度不变
         var newItems = self.items
         // 找出这些 app 的位置
-        var indices: [Int] = []
+        var placeholders: [(Int, AppInfo)] = []
+        var remainingApps = apps
         for (idx, item) in newItems.enumerated() {
-            if case let .app(a) = item, apps.contains(a) { indices.append(idx) }
-            if indices.count == apps.count { break }
+            guard !remainingApps.isEmpty else { break }
+            if case let .app(a) = item, let matchIndex = remainingApps.firstIndex(of: a) {
+                let match = remainingApps.remove(at: matchIndex)
+                placeholders.append((idx, match))
+            }
         }
         // 将涉及的 app 槽位先置空
-        for idx in indices { newItems[idx] = .empty(UUID().uuidString) }
+        for (idx, _) in placeholders {
+            newItems[idx] = .empty(UUID().uuidString)
+        }
         // 选择放置文件夹的位置：优先 insertIndex，否则用最小索引；夹紧范围并用替换而非插入
-        let baseIndex = indices.min() ?? min(newItems.count - 1, max(0, insertIndex ?? (newItems.count - 1)))
+        let baseIndex = placeholders.map { $0.0 }.min() ?? min(newItems.count - 1, max(0, insertIndex ?? (newItems.count - 1)))
         let desiredIndex = insertIndex ?? baseIndex
         let safeIndex = min(max(0, desiredIndex), max(0, newItems.count - 1))
         if newItems.isEmpty {
@@ -1870,11 +2386,13 @@ final class AppStore: ObservableObject {
         }
         
         // 同步更新 items 中的该文件夹条目，避免界面继续引用旧的文件夹内容
+        var emptiedSlots: [Int] = []
         for idx in items.indices {
             if case .folder(let f) = items[idx], f.id == folder.id {
                 if updatedFolder.apps.isEmpty {
                     // 文件夹已空并被删除，则将该位置标记为空槽，等待后续补位
                     items[idx] = .empty(UUID().uuidString)
+                    emptiedSlots.append(idx)
                 } else {
                     items[idx] = .folder(updatedFolder)
                 }
@@ -1884,25 +2402,25 @@ final class AppStore: ObservableObject {
         // 将应用重新添加到应用列表
         apps.append(app)
         apps.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-        
-        // 尝试将该应用直接放入 items 的第一个空槽，避免出现临时空白格
-        if let emptyIndex = items.firstIndex(where: { if case .empty = $0 { return true } else { return false } }) {
-            items[emptyIndex] = .app(app)
+
+        // 若删除文件夹后留下空槽，优先在原位置补位，避免跨页移动
+        if let firstEmptied = emptiedSlots.first, firstEmptied < items.count {
+            items[firstEmptied] = .app(app)
         }
-        
+
         // 立即触发文件夹更新，通知所有相关视图刷新图标和名称
         triggerFolderUpdate()
-        
+
         // 触发网格视图刷新，确保界面立即更新
         triggerGridRefresh()
-        
-        // 不要调用 rebuildItems()，因为它会将应用移动到末尾
-        // 直接进行页面内压缩，保持应用在第一页的位置
+
+        // 仅在页内压缩空槽
         compactItemsWithinPages()
-        
+        removeEmptyPages()
+
         // 刷新缓存，确保搜索时能找到从文件夹移除的应用（在重建之后刷新）
         refreshCacheAfterFolderOperation()
-        
+
         saveAllOrder()
     }
     
@@ -1955,7 +2473,8 @@ final class AppStore: ObservableObject {
         
         // 清空当前项目列表
         items.removeAll()
-        
+        missingPlaceholders.removeAll()
+
         // 重新扫描应用，不加载持久化数据
         scanApplications(loadPersistedOrder: false)
         
@@ -1984,20 +2503,28 @@ final class AppStore: ObservableObject {
         while index < items.count {
             let end = min(index + itemsPerPage, items.count)
             let pageSlice = Array(items[index..<end])
-            let nonEmpty = pageSlice.filter { if case .empty = $0 { return false } else { return true } }
-            let emptyCount = pageSlice.count - nonEmpty.count
-            
+            var nonEmpty: [LaunchpadItem] = []
+            var emptyTokens: [String] = []
+            nonEmpty.reserveCapacity(pageSlice.count)
+            emptyTokens.reserveCapacity(pageSlice.count)
+
+            for item in pageSlice {
+                switch item {
+                case .empty(let token):
+                    emptyTokens.append(token)
+                default:
+                    nonEmpty.append(item)
+                }
+            }
+
             // 先添加非空项目，保持原有顺序
             result.append(contentsOf: nonEmpty)
-            
+
             // 再添加empty项目到页面末尾
-            if emptyCount > 0 {
-                var empties: [LaunchpadItem] = []
-                empties.reserveCapacity(emptyCount)
-                for _ in 0..<emptyCount { empties.append(.empty(UUID().uuidString)) }
-                result.append(contentsOf: empties)
+            if !emptyTokens.isEmpty {
+                result.append(contentsOf: emptyTokens.map { .empty($0) })
             }
-            
+
             index = end
         }
         items = filteredItemsRemovingHidden(from: result)
@@ -2115,7 +2642,16 @@ final class AppStore: ObservableObject {
                 // 如果 app 已进入某个文件夹，则从顶层移除；否则保留其原有位置
                 if !appsInFolders.contains(app) {
                     newItems.append(.app(app))
-                    seenAppPaths.insert(app.url.path)
+                    seenAppPaths.insert(standardizedFilePath(app.url.path))
+                }
+            case .missingApp(let placeholder):
+                if let item = currentMissingAppItem(for: placeholder) {
+                    newItems.append(item)
+                    if case .missingApp(let current) = item {
+                        seenAppPaths.insert(standardizedFilePath(current.bundlePath))
+                    }
+                } else {
+                    newItems.append(.empty(UUID().uuidString))
                 }
             case .empty(let token):
                 // 保留 empty 作为占位，维持每页独立
@@ -2124,7 +2660,10 @@ final class AppStore: ObservableObject {
         }
 
         // 追加遗漏的自由应用（未在顶层出现，但也不在任何文件夹中）
-        let missingFreeApps = apps.filter { !appsInFolders.contains($0) && !seenAppPaths.contains($0.url.path) }
+        let missingFreeApps = apps.filter {
+            guard !appsInFolders.contains($0) else { return false }
+            return !seenAppPaths.contains(standardizedFilePath($0.url.path))
+        }
         newItems.append(contentsOf: missingFreeApps.map { .app($0) })
 
         // 注意：不要自动把缺失的文件夹追加到末尾，
@@ -2179,8 +2718,10 @@ final class AppStore: ObservableObject {
                         return existing
                     }
                     let url = URL(fileURLWithPath: path)
-                    guard FileManager.default.fileExists(atPath: url.path) else { return nil }
-                    return self.appInfo(from: url)
+                    if FileManager.default.fileExists(atPath: url.path) {
+                        return self.appInfo(from: url)
+                    }
+                    return self.placeholderAppInfo(forMissingPath: path, preferredName: row.folderName)
                 }
                 let folder = FolderInfo(id: fid, name: row.folderName ?? "Untitled", apps: folderApps, createdAt: row.createdAt)
                 folderMap[fid] = folder
@@ -2201,11 +2742,36 @@ final class AppStore: ObservableObject {
                 case "app":
                     if let path = row.appPath, !folderAppPathSet.contains(path) {
                         if let existing = apps.first(where: { $0.url.path == path }) {
+                            clearMissingPlaceholder(for: path)
                             combined.append(.app(existing))
                         } else {
                             let url = URL(fileURLWithPath: path)
                             if FileManager.default.fileExists(atPath: url.path) {
-                                combined.append(.app(self.appInfo(from: url)))
+                                let info = self.appInfo(from: url)
+                                clearMissingPlaceholder(for: path)
+                                combined.append(.app(info))
+                            } else if let placeholder = updateMissingPlaceholder(path: path,
+                                                                                displayName: row.appDisplayName,
+                                                                                removableSource: row.removableSource) {
+                                combined.append(.missingApp(placeholder))
+                            }
+                        }
+                    }
+                case "missing":
+                    if let path = row.appPath {
+                        if let existing = apps.first(where: { $0.url.path == path }) {
+                            clearMissingPlaceholder(for: path)
+                            combined.append(.app(existing))
+                        } else {
+                            let url = URL(fileURLWithPath: path)
+                            if FileManager.default.fileExists(atPath: url.path) {
+                                let info = self.appInfo(from: url)
+                                clearMissingPlaceholder(for: path)
+                                combined.append(.app(info))
+                            } else if let placeholder = updateMissingPlaceholder(path: path,
+                                                                                displayName: row.appDisplayName,
+                                                                                removableSource: row.removableSource) {
+                                combined.append(.missingApp(placeholder))
                             }
                         }
                     }
@@ -2227,6 +2793,7 @@ final class AppStore: ObservableObject {
                         self.pruneHiddenAppsFromAppList()
                     }
                 }
+                self.refreshMissingPlaceholders()
                 self.hasAppliedOrderFromStore = true
             }
             return true
@@ -2248,8 +2815,10 @@ final class AppStore: ObservableObject {
                 let folderApps: [AppInfo] = row.appPaths.compactMap { path in
                     if let existing = apps.first(where: { $0.url.path == path }) { return existing }
                     let url = URL(fileURLWithPath: path)
-                    guard FileManager.default.fileExists(atPath: url.path) else { return nil }
-                    return self.appInfo(from: url)
+                    if FileManager.default.fileExists(atPath: url.path) {
+                        return self.appInfo(from: url)
+                    }
+                    return self.placeholderAppInfo(forMissingPath: path, preferredName: row.folderName)
                 }
                 let folder = FolderInfo(id: row.id, name: row.folderName ?? "Untitled", apps: folderApps, createdAt: row.createdAt)
                 folderMap[row.id] = folder
@@ -2261,18 +2830,36 @@ final class AppStore: ObservableObject {
                 if row.kind == "empty" { return .empty(row.id) }
                 if row.kind == "app", let path = row.appPath {
                     if folderAppPathSet.contains(path) { return nil }
-                    if let existing = apps.first(where: { $0.url.path == path }) { return .app(existing) }
+                    if let existing = apps.first(where: { $0.url.path == path }) {
+                        clearMissingPlaceholder(for: path)
+                        return .app(existing)
+                    }
                     let url = URL(fileURLWithPath: path)
-                    guard FileManager.default.fileExists(atPath: url.path) else { return nil }
-                    return .app(self.appInfo(from: url))
+                    if FileManager.default.fileExists(atPath: url.path) {
+                        clearMissingPlaceholder(for: path)
+                        return .app(self.appInfo(from: url))
+                    }
+                    if let placeholder = updateMissingPlaceholder(path: path) {
+                        return .missingApp(placeholder)
+                    }
+                    return nil
                 }
                 return nil
             }
 
             let appsInFolders = Set(foldersInOrder.flatMap { $0.apps })
-            let appsInCombined: Set<AppInfo> = Set(combined.compactMap { if case let .app(a) = $0 { return a } else { return nil } })
+            let seenPaths = Set(combined.compactMap { item -> String? in
+                switch item {
+                case .app(let app):
+                    return standardizedFilePath(app.url.path)
+                case .missingApp(let placeholder):
+                    return standardizedFilePath(placeholder.bundlePath)
+                default:
+                    return nil
+                }
+            })
             let missingFreeApps = apps
-                .filter { !appsInFolders.contains($0) && !appsInCombined.contains($0) }
+                .filter { !appsInFolders.contains($0) && !seenPaths.contains(standardizedFilePath($0.url.path)) }
                 .map { LaunchpadItem.app($0) }
             combined.append(contentsOf: missingFreeApps)
 
@@ -2287,6 +2874,7 @@ final class AppStore: ObservableObject {
                         self.pruneHiddenAppsFromAppList()
                     }
                 }
+                self.refreshMissingPlaceholders()
                 self.hasAppliedOrderFromStore = true
             }
         } catch {
@@ -2339,7 +2927,20 @@ final class AppStore: ObservableObject {
                         pageIndex: pageIndex,
                         position: position,
                         kind: "app",
-                        appPath: app.url.path
+                        appPath: app.url.path,
+                        appDisplayName: app.name,
+                        removableSource: removableSourcePath(forAppPath: app.url.path)
+                    )
+                    modelContext.insert(row)
+                case .missingApp(let placeholder):
+                    let row = PageEntryData(
+                        slotId: slotId,
+                        pageIndex: pageIndex,
+                        position: position,
+                        kind: "missing",
+                        appPath: placeholder.bundlePath,
+                        appDisplayName: placeholder.displayName,
+                        removableSource: placeholder.removableSource
                     )
                     modelContext.insert(row)
                 case .empty:
@@ -2397,6 +2998,7 @@ final class AppStore: ObservableObject {
             
             // 保存更改
             try modelContext.save()
+            missingPlaceholders.removeAll()
         } catch {
             // 忽略错误，确保重置流程继续进行
         }
@@ -2581,6 +3183,8 @@ final class AppStore: ObservableObject {
             return "文件夹"
         case .empty:
             return "空槽位"
+        case .missingApp:
+            return "缺失应用"
         }
     }
     
@@ -2593,6 +3197,8 @@ final class AppStore: ObservableObject {
             return "文件夹: \(folder.name)"
         case .empty:
             return "空槽位"
+        case let .missingApp(placeholder):
+            return "缺失应用: \(placeholder.bundlePath)"
         }
     }
     
@@ -2836,6 +3442,14 @@ final class AppStore: ObservableObject {
                     continue
                 }
                 result.append(.app(app))
+            case .missingApp(let placeholder):
+                let rawPath = placeholder.bundlePath
+                let path = standardizedFilePath(rawPath)
+                if hidden.contains(rawPath) || hidden.contains(path) {
+                    didChange = true
+                    continue
+                }
+                result.append(.missingApp(placeholder))
             case .folder(let folder):
                 let filteredFolder = filteredFolderRemovingHidden(from: folder, hidden: hidden)
                 if filteredFolder.apps.count != folder.apps.count {
@@ -2976,6 +3590,8 @@ final class AppStore: ObservableObject {
             case .folder:
                 break
             case .empty:
+                break
+            case .missingApp:
                 break
             }
         }

@@ -15,6 +15,7 @@ struct SettingsView: View {
     @State private var editingDrafts: [String: String] = [:]
     @State private var editingEntries: Set<String> = []
     @State private var iconImportError: String? = nil
+    @State private var showAppSourcesResetDialog = false
     @State private var isCapturingShortcut = false
     @State private var shortcutCaptureMonitor: Any?
     @State private var pendingShortcut: AppStore.HotKeyConfiguration?
@@ -102,6 +103,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
     case appearance
     case performance
     case titles
+    case appSources
     case hiddenApps
     case development
     case sound
@@ -114,6 +116,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
     var iconName: String {
         switch self {
         case .general: return "gearshape"
+        case .appSources: return "externaldrive"
         case .gameController: return "gamecontroller"
         case .sound: return "speaker.wave.2"
         case .appearance: return "paintbrush"
@@ -131,6 +134,8 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .general:
             colors = [Color(red: 0.12, green: 0.52, blue: 0.96), Color(red: 0.22, green: 0.72, blue: 0.94)]
+        case .appSources:
+            colors = [Color(nsColor: .systemGray), Color(nsColor: .lightGray)]
         case .sound:
             colors = [Color(red: 0.96, green: 0.48, blue: 0.24), Color(red: 0.98, green: 0.68, blue: 0.30)]
         case .gameController:
@@ -156,6 +161,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
     var localizationKey: LocalizationKey {
         switch self {
         case .general: return .settingsSectionGeneral
+        case .appSources: return .settingsSectionAppSources
         case .sound: return .settingsSectionSound
         case .gameController: return .settingsSectionGameController
         case .appearance: return .settingsSectionAppearance
@@ -219,6 +225,8 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
             performanceSection
         case .titles:
             titlesSection
+        case .appSources:
+            appSourcesSection
         case .hiddenApps:
             hiddenAppsSection
         case .development:
@@ -742,6 +750,74 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         }
     }
 
+    private func presentAppSourcePicker() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = true
+        panel.prompt = appStore.localized(.chooseButton)
+
+        if panel.runModal() == .OK {
+            var addedAny = false
+            for url in panel.urls {
+                if appStore.addCustomAppSource(path: url.path) {
+                    addedAny = true
+                }
+            }
+            if !addedAny && !panel.urls.isEmpty {
+                NSSound.beep()
+            }
+        }
+    }
+
+    private func pathExists(_ path: String) -> Bool {
+        var isDir: ObjCBool = false
+        return FileManager.default.fileExists(atPath: path, isDirectory: &isDir) && isDir.boolValue
+    }
+
+    private func displayName(for path: String) -> String {
+        let url = URL(fileURLWithPath: path)
+        let name = url.lastPathComponent
+        return name.isEmpty ? path : name
+    }
+
+    @ViewBuilder
+    private func appSourceRow(icon: String, path: String, isAvailable: Bool, @ViewBuilder accessory: () -> some View) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 24, alignment: .center)
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 8) {
+                    Text(displayName(for: path))
+                        .font(.body)
+                    if !isAvailable {
+                        Text(appStore.localized(.scanSourcesMissingBadge))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.orange)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color.orange.opacity(0.18)))
+                    }
+                }
+                Text(path)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 12)
+            accessory()
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.secondary.opacity(0.08))
+        )
+    }
+
     private struct CustomTitleEntry: Identifiable {
         let id: String
         let appInfo: AppInfo
@@ -989,29 +1065,36 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
 
     private var generalSection: some View {
         VStack(alignment: .leading, spacing: 24) {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(appStore.localized(.languagePickerTitle))
-                    .font(.headline)
-                Picker(appStore.localized(.languagePickerTitle), selection: $appStore.preferredLanguage) {
-                    ForEach(AppLanguage.allCases) { language in
-                        Text(appStore.localizedLanguageName(for: language)).tag(language)
+            HStack(alignment: .top, spacing: 32) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(appStore.localized(.languagePickerTitle))
+                        .font(.headline)
+                    Picker(appStore.localized(.languagePickerTitle), selection: $appStore.preferredLanguage) {
+                        ForEach(AppLanguage.allCases) { language in
+                            Text(appStore.localizedLanguageName(for: language)).tag(language)
+                        }
                     }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
                 }
-                .labelsHidden()
-                .pickerStyle(.menu)
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(appStore.localized(.appearanceModeTitle))
+                        .font(.headline)
+                    Picker(appStore.localized(.appearanceModeTitle), selection: $appStore.appearancePreference) {
+                        ForEach(AppearancePreference.allCases) { preference in
+                            Text(appStore.localized(preference.localizationKey)).tag(preference)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                }
+                Spacer(minLength: 0)
             }
 
-            VStack(alignment: .leading, spacing: 12) {
-                Text(appStore.localized(.appearanceModeTitle))
-                    .font(.headline)
-                Picker(appStore.localized(.appearanceModeTitle), selection: $appStore.appearancePreference) {
-                    ForEach(AppearancePreference.allCases) { preference in
-                        Text(appStore.localized(preference.localizationKey)).tag(preference)
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.menu)
-            }
+            Toggle(appStore.localized(.launchAtLoginTitle), isOn: $appStore.isStartOnLogin)
+            .toggleStyle(.switch)
+            .disabled(!appStore.canConfigureStartOnLogin)
 
             VStack(alignment: .leading, spacing: 12) {
                 Text(appStore.localized(.customIconTitle))
@@ -1073,8 +1156,21 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
                 }
             }
 
-            Toggle(appStore.localized(.showQuickRefreshButton), isOn: $appStore.showQuickRefreshButton)
-                .toggleStyle(.switch)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .top, spacing: 32) {
+                    Toggle(appStore.localized(.lockLayoutTitle), isOn: $appStore.isLayoutLocked)
+                        .toggleStyle(.switch)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Toggle(appStore.localized(.showQuickRefreshButton), isOn: $appStore.showQuickRefreshButton)
+                        .toggleStyle(.switch)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                Text(appStore.localized(.lockLayoutDescription))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
             HStack {
                 Button { appStore.refresh() } label: {
                     Label(appStore.localized(.refresh), systemImage: "arrow.clockwise")
@@ -1099,6 +1195,73 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
                         .foregroundStyle(Color.red)
                 }
             }
+        }
+    }
+
+    private var appSourcesSection: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(appStore.localized(.scanSourcesIntroTitle))
+                    .font(.headline)
+                Text(appStore.localized(.scanSourcesIntroDescription))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text(appStore.localized(.scanSourcesDefaultListTitle))
+                    .font(.subheadline.weight(.semibold))
+                ForEach(appStore.builtinAppSourcePaths, id: \.self) { path in
+                    appSourceRow(icon: "internaldrive", path: path, isAvailable: true, accessory: { EmptyView() })
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 12) {
+                    Text(appStore.localized(.scanSourcesCustomListTitle))
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
+                    Button {
+                        presentAppSourcePicker()
+                    } label: {
+                        Label(appStore.localized(.scanSourcesAddButton), systemImage: "plus.circle")
+                    }
+                    .buttonStyle(.borderless)
+
+                    Button {
+                        showAppSourcesResetDialog = true
+                    } label: {
+                        Label(appStore.localized(.scanSourcesResetButton), systemImage: "arrow.counterclockwise")
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(appStore.customAppSourcePaths.isEmpty)
+                }
+
+                if appStore.customAppSourcePaths.isEmpty {
+                    Text(appStore.localized(.scanSourcesEmptyHint))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 4)
+                } else {
+                    ForEach(appStore.customAppSourcePaths, id: \.self) { path in
+                        appSourceRow(icon: "folder", path: path, isAvailable: pathExists(path)) {
+                            Button {
+                                appStore.removeCustomAppSource(path: path)
+                            } label: {
+                                Image(systemName: "minus.circle.fill")
+                                    .foregroundStyle(Color.red)
+                            }
+                            .buttonStyle(.borderless)
+                        }
+                    }
+                }
+            }
+        }
+        .confirmationDialog(appStore.localized(.scanSourcesResetButton), isPresented: $showAppSourcesResetDialog, titleVisibility: .visible) {
+            Button(appStore.localized(.scanSourcesResetButton), role: .destructive) {
+                appStore.resetCustomAppSources()
+            }
+            Button(appStore.localized(.cancel), role: .cancel) {}
         }
     }
 

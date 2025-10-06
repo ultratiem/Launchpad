@@ -102,9 +102,19 @@ private struct LaunchpadItemButtonContent: View {
     let externalScale: CGFloat?
     let hoverMagnificationEnabled: Bool
     let hoverMagnificationScale: CGFloat
-
     @State private var isHovered = false
     @State private var forceRefreshTrigger: UUID = UUID()
+
+    private var isMissingItem: Bool {
+        switch item {
+        case .missingApp:
+            return true
+        case .app(let app):
+            return !FileManager.default.fileExists(atPath: app.url.path)
+        default:
+            return false
+        }
+    }
 
     var body: some View {
         VStack(spacing: 8) {
@@ -118,10 +128,13 @@ private struct LaunchpadItemButtonContent: View {
                             return cachedIcon
                         }
                         let base = app.icon
-                        if base.size.width > 0 && base.size.height > 0 {
+                        if FileManager.default.fileExists(atPath: app.url.path),
+                           base.size.width > 0 && base.size.height > 0 {
                             return base
                         }
-                        return NSWorkspace.shared.icon(forFile: app.url.path)
+                        return MissingAppPlaceholder.defaultIcon
+                    case .missingApp(let placeholder):
+                        return placeholder.icon
                     case .folder(let folder):
                         return folder.icon(of: iconSize)
                     case .empty:
@@ -146,7 +159,22 @@ private struct LaunchpadItemButtonContent: View {
                     .interpolation(.high)
                     .antialiased(true)
                     .frame(width: iconSize, height: iconSize)
+                    .opacity(isMissingItem ? 0.65 : 1.0)
                     .id(item.id + "_" + forceRefreshTrigger.uuidString)
+
+                if isMissingItem {
+                    Circle()
+                        .fill(Color.orange.opacity(0.85))
+                        .frame(width: iconSize * 0.22, height: iconSize * 0.22)
+                        .overlay(
+                            Image(systemName: "exclamationmark")
+                                .font(.system(size: iconSize * 0.14, weight: .bold))
+                                .foregroundStyle(Color.white)
+                        )
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                        .padding(iconSize * 0.1)
+                        .allowsHitTesting(false)
+                }
             }
             .scaleEffect(iconScale)
             .animation(LNAnimations.springFast, value: isSelected)
@@ -159,7 +187,7 @@ private struct LaunchpadItemButtonContent: View {
                     .multilineTextAlignment(.center)
                     .truncationMode(.tail)
                     .frame(width: labelWidth)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(isMissingItem ? Color.secondary : Color.primary)
             }
         }
         .padding(8)

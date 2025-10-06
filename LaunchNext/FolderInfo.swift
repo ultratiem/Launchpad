@@ -87,6 +87,7 @@ enum LaunchpadItem: Identifiable, Equatable {
     case app(AppInfo)
     case folder(FolderInfo)
     case empty(String)
+    case missingApp(MissingAppPlaceholder)
     
     var id: String {
         switch self {
@@ -96,6 +97,8 @@ enum LaunchpadItem: Identifiable, Equatable {
             return "folder_\(folder.id)"
         case .empty(let token):
             return "empty_\(token)"
+        case .missingApp(let placeholder):
+            return "missing_\(placeholder.bundlePath)"
         }
     }
     
@@ -107,9 +110,11 @@ enum LaunchpadItem: Identifiable, Equatable {
             return folder.name
         case .empty:
             return ""
+        case .missingApp(let placeholder):
+            return placeholder.displayName
         }
     }
-    
+
     var icon: NSImage {
         switch self {
         case .app(let app):
@@ -120,6 +125,8 @@ enum LaunchpadItem: Identifiable, Equatable {
         case .empty:
             // 透明占位
             return NSImage(size: .zero)
+        case .missingApp(let placeholder):
+            return placeholder.icon
         }
     }
 
@@ -205,13 +212,16 @@ final class PageEntryData {
     @Attribute(.unique) var slotId: String
     var pageIndex: Int
     var position: Int
-    var kind: String          // "app" | "folder" | "empty"
+    var kind: String          // "app" | "folder" | "empty" | "missing"
     // app 条目
     var appPath: String?
+    var appDisplayName: String?
     // folder 条目
     var folderId: String?
     var folderName: String?
     var appPaths: [String]
+    // removable source 记录该缺失应用来自哪个可移除目录，便于清理
+    var removableSource: String?
     // 时间戳
     var createdAt: Date
     var updatedAt: Date
@@ -224,6 +234,8 @@ final class PageEntryData {
          folderId: String? = nil,
          folderName: String? = nil,
          appPaths: [String] = [],
+         appDisplayName: String? = nil,
+         removableSource: String? = nil,
          createdAt: Date = Date(),
          updatedAt: Date = Date()) {
         self.slotId = slotId
@@ -234,7 +246,48 @@ final class PageEntryData {
         self.folderId = folderId
         self.folderName = folderName
         self.appPaths = appPaths
+        self.appDisplayName = appDisplayName
+        self.removableSource = removableSource
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
+}
+
+struct MissingAppPlaceholder: Equatable, Hashable, Identifiable {
+    let bundlePath: String
+    let displayName: String
+    let removableSource: String?
+    var id: String { bundlePath }
+    var icon: NSImage { Self.defaultIcon }
+
+    static let defaultIcon: NSImage = {
+        let dimension: CGFloat = 256
+        let size = NSSize(width: dimension, height: dimension)
+        let image = NSImage(size: size)
+        image.lockFocus()
+
+        let rect = NSRect(origin: .zero, size: size)
+        let backgroundPath = NSBezierPath(roundedRect: rect,
+                                          xRadius: dimension * 0.18,
+                                          yRadius: dimension * 0.18)
+        NSColor.controlBackgroundColor.withAlphaComponent(0.92).setFill()
+        backgroundPath.fill()
+
+        let inset = dimension * 0.12
+        let strokeRect = rect.insetBy(dx: inset, dy: inset)
+        let dashPath = NSBezierPath(roundedRect: strokeRect,
+                                    xRadius: strokeRect.width * 0.18,
+                                    yRadius: strokeRect.height * 0.18)
+        let pattern: [CGFloat] = [dimension * 0.16, dimension * 0.10]
+        pattern.withUnsafeBufferPointer { buffer in
+            dashPath.setLineDash(buffer.baseAddress, count: pattern.count, phase: 0)
+        }
+        dashPath.lineWidth = max(1, dimension * 0.05)
+        NSColor.quaternaryLabelColor.setStroke()
+        dashPath.stroke()
+
+        image.unlockFocus()
+        image.isTemplate = false
+        return image
+    }()
 }

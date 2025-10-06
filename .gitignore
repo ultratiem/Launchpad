@@ -21,3 +21,6 @@ UpdaterScripts/SwiftUpdater/.build-*/
 
 # Breakpoints
 *.xcbkptlist
+
+# Parallel sources
+parallel_version/

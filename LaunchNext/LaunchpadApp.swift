@@ -46,7 +46,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
 
         SoundManager.shared.bind(appStore: appStore)
         VoiceManager.shared.bind(appStore: appStore)
-        setupWindow()
+
+        let launchedAtLogin = wasLaunchedAsLoginItem()
+        let shouldSilentlyLaunch = launchedAtLogin && appStore.isStartOnLogin
+
+        setupWindow(showImmediately: !shouldSilentlyLaunch)
         appStore.performInitialScanIfNeeded()
         appStore.startAutoRescan()
 
@@ -110,7 +114,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
         }
     }
 
-    private func setupWindow() {
+    private func setupWindow(showImmediately: Bool = true) {
         guard let screen = NSScreen.main else { return }
         let rect = calculateContentRect(for: screen)
         
@@ -158,7 +162,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
         windowIsVisible = false
 
         // 初始化完成后执行首个淡入
-        showWindow()
+        if showImmediately {
+            showWindow()
+        }
 
         // 背景点击关闭逻辑改为 SwiftUI 内部实现，避免与输入控件冲突
     }
@@ -206,11 +212,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
         }
     }
 
+    private func wasLaunchedAsLoginItem() -> Bool {
+        guard #available(macOS 13.0, *) else { return false }
+        guard let event = NSAppleEventManager.shared().currentAppleEvent else { return false }
+        guard event.eventID == kAEOpenApplication else { return false }
+        guard let descriptor = event.paramDescriptor(forKeyword: keyAEPropData) else { return false }
+        return descriptor.enumCodeValue == keyAELaunchedAsLogInItem
+    }
+
     private func applyAppearancePreference(_ preference: AppearancePreference) {
         let appearance = preference.nsAppearance.flatMap { NSAppearance(named: $0) }
         window?.appearance = appearance
         NSApp.appearance = appearance
     }
+
+    func presentLaunchError(_ error: Error, for url: URL) { }
     
     func showWindow() {
         pendingShow = true
