@@ -1707,7 +1707,7 @@ final class LocalizationManager {
 
         builder[.english]?.merge([
             .settingsSectionGeneral: "General",
-                .settingsSectionAppSources: "App sources",
+            .settingsSectionAppSources: "App sources",
             .settingsSectionGameController: "Game controller",
             .settingsSectionAppearance: "Appearance",
             .settingsSectionHiddenApps: "Hidden apps",
@@ -2006,9 +2006,9 @@ final class LocalizationManager {
             .launchAtLoginTitle: "Lancement silencieux à l’ouverture de session",
             .launchAtLoginDescription: "Après la connexion à macOS, LaunchNext se lance en arrière-plan sans afficher de fenêtre.",
             .lockLayoutTitle: "Verrouiller la disposition",
-            .lockLayoutDescription: "Empêche de réorganiser les apps et dossiers tant que l’option est activée.",
+            .lockLayoutDescription: "Empêche de réorganiser les applications et dossiers tant que l’option est activée.",
             .settingsSectionGeneral: "Général",
-            .settingsSectionAppSources: "Sources d’analyse",
+            .settingsSectionAppSources: "Gestion des dossiers",
             .settingsSectionGameController: "Manette",
             .settingsSectionAppearance: "Apparence",
             .settingsSectionHiddenApps: "Applications masquées",
@@ -2057,14 +2057,14 @@ final class LocalizationManager {
             .performancePlaceholderSubtitle: "Les indicateurs apparaîtront ici prochainement.",
             .scanSourcesIntroTitle: "Gérer les emplacements analysés par LaunchNext",
             .scanSourcesIntroDescription: "Ajoutez des disques externes ou des dossiers personnalisés pour que leurs applications apparaissent automatiquement dans LaunchNext.",
-            .scanSourcesPlaceholder: "Bientôt disponible : ajoutez ou supprimez ici des dossiers personnalisés et LaunchNext restera synchronisé.",
-            .scanSourcesDefaultListTitle: "Répertoires système",
-            .scanSourcesCustomListTitle: "Répertoires personnalisés",
+            .scanSourcesPlaceholder: "Bientôt disponible : vous pourrez sélectionner ici des dossiers personnalisés que LaunchNext analysera et maintiendra à jour.",
+            .scanSourcesDefaultListTitle: "Dossiers système",
+            .scanSourcesCustomListTitle: "Dossiers personnalisés",
             .scanSourcesAddButton: "Ajouter des dossiers…",
             .scanSourcesResetButton: "Restaurer par défaut",
-            .scanSourcesEmptyHint: "Aucun dossier personnalisé pour le moment. Ajoutez-en pour synchroniser davantage d’apps.",
-            .scanSourcesMissingBadge: "Hors ligne",
-            .missingAppBadge: "Hors ligne"
+            .scanSourcesEmptyHint: "Ajoutez des dossiers pour synchroniser des applications supplémentaires.",
+            .scanSourcesMissingBadge: "Indisponible",
+            .missingAppBadge: "Indisponible"
         ]) { _, new in new }
 
         builder[.spanish]?.merge([
